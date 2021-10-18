@@ -133,3 +133,13 @@ lem_analysis/monte_carlo/simulations/
 #lem_analysis/
 
 lem_analysis/time_complexity/simulations/
+
+xx_publication_materials/2021_zade_apen_satisfying_user_pref/truffle/migrations/
+
+xx_publication_materials/2021_zade_apen_satisfying_user_pref/time_complexity/simulations/
+
+xx_publication_materials/2021_zade_energies_bc_lemlab_extension/truffle/migrations/
+
+xx_publication_materials/2021_zade_energies_bc_lemlab_extension/truffle/test/
+
+xx_publication_materials/2021_zade_energies_bc_lemlab_extension/truffle/truffle-config.js

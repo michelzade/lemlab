@@ -1,13 +1,12 @@
-import os
 import time
 import yaml
 import pandas as pd
 import random
 
-from lemlab.db_connection import db_connection, db_param
-from lemlab.platform import lem
+from lemlab.db_connection.db_connection import DatabaseConnection
 from lemlab.bc_connection.bc_connection import BlockchainConnection
-from lemlab.platform import lem_settlement
+from lemlab.db_connection import db_param
+from lemlab.lem import clearing_ex_ante, settlement
 from current_scenario_file import scenario_file_path
 
 
@@ -19,7 +18,7 @@ def setup_test_general(generate_random_test_data=False):
         config = yaml.load(config_file, Loader=yaml.FullLoader)
 
     # Create a db connection object
-    db_obj = db_connection.DatabaseConnection(db_dict=config['db_connections']['database_connection_admin'],
+    db_obj = DatabaseConnection(db_dict=config['db_connections']['database_connection_admin'],
                                               lem_config=config['lem'])
     # Create bc connection objects to ClearingExAnte and Settlement contract
     market_contract_dict = config['db_connections']['bc_dict']
