@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from lemlab.platform.blockchain_tests import test_utils
+from .test_utils import setup_settlement_test
 
 config = None
 db_obj = None
@@ -12,8 +12,7 @@ bc_obj_settlement = None
 @pytest.fixture(scope="session", autouse=True)
 def setup():
     global config, db_obj, bc_obj_clearing_ex_ante, bc_obj_settlement
-    config, db_obj, bc_obj_clearing_ex_ante, bc_obj_settlement = \
-        test_utils.setup_settlement_test(generate_random_test_data=True)
+    config, db_obj, bc_obj_clearing_ex_ante, bc_obj_settlement = setup_settlement_test(generate_random_test_data=True)
 
 
 def test_meter_readings():

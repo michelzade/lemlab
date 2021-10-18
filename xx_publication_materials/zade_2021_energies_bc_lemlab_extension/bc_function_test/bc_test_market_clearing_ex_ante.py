@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
-from lemlab.db_connection import db_param
-from lemlab.platform.blockchain_tests import test_utils
+import test_utils
+
 
 config = None
 db_obj = None
@@ -22,10 +22,10 @@ def test_clearing_results_ex_ante():
 
     # Sort market results and reset indices
     clearing_ex_ante_results_bc = clearing_ex_ante_results_bc.sort_values(
-        by=[db_param.TS_DELIVERY, db_param.QTY_ENERGY_TRADED, db_param.PRICE_ENERGY_OFFER],
+        by=[db_obj.db_param.TS_DELIVERY, db_obj.db_param.QTY_ENERGY_TRADED, db_obj.db_param.PRICE_ENERGY_OFFER],
         ascending=[True, True, True])
     clearing_ex_ante_results_db = clearing_ex_ante_results_db.sort_values(
-        by=[db_param.TS_DELIVERY, db_param.QTY_ENERGY_TRADED, db_param.PRICE_ENERGY_OFFER],
+        by=[db_obj.db_param.TS_DELIVERY, db_obj.db_param.QTY_ENERGY_TRADED, db_obj.db_param.PRICE_ENERGY_OFFER],
         ascending=[True, True, True])
     clearing_ex_ante_results_bc = clearing_ex_ante_results_bc.reset_index(drop=True)
     clearing_ex_ante_results_db = clearing_ex_ante_results_db.reset_index(drop=True)

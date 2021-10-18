@@ -1,11 +1,14 @@
 import time
 import yaml
-import pandas as pd
 import random
+import string
+
+import numpy as np
+import pandas as pd
 
 from lemlab.db_connection.db_connection import DatabaseConnection
-from lemlab.bc_connection.bc_connection import BlockchainConnection
-from lemlab.db_connection import db_param
+from xx_publication_materials.zade_2021_energies_bc_lemlab_extension.bc_connection.bc_connection import \
+    BlockchainConnection
 from lemlab.lem import clearing_ex_ante, settlement
 from current_scenario_file import scenario_file_path
 
@@ -19,14 +22,14 @@ def setup_test_general(generate_random_test_data=False):
 
     # Create a db connection object
     db_obj = DatabaseConnection(db_dict=config['db_connections']['database_connection_admin'],
-                                              lem_config=config['lem'])
+                                lem_config=config['lem'])
     # Create bc connection objects to ClearingExAnte and Settlement contract
     market_contract_dict = config['db_connections']['bc_dict']
     market_contract_dict["contract_name"] = "ClearingExAnte"
     bc_obj_clearing_ex_ante = BlockchainConnection(bc_dict=market_contract_dict)
     settlement_contract_dict = config['db_connections']['bc_dict']
     settlement_contract_dict["contract_name"] = "Settlement"
-    bc_obj_settlement = BlockchainConnection(settlement_contract_dict)
+    bc_obj_settlement = BlockchainConnection(bc_dict=settlement_contract_dict)
 
     if generate_random_test_data:
         init_random_data(db_obj=db_obj, bc_obj_market=bc_obj_clearing_ex_ante,
@@ -43,9 +46,9 @@ def init_random_data(db_obj, bc_obj_market, config, bc_obj_settlement):
     bc_obj_settlement.clear_data()
 
     # Create list of random user ids and meter ids
-    ids_users_random = lem.create_user_ids(num=config['prosumer']['general_number_of'])
-    ids_meter_random = lem.create_user_ids(num=config['prosumer']['general_number_of'])
-    ids_market_agents = lem.create_user_ids(num=config['prosumer']['general_number_of'])
+    ids_users_random = create_user_ids(num=config['prosumer']['general_number_of'])
+    ids_meter_random = create_user_ids(num=config['prosumer']['general_number_of'])
+    ids_market_agents = create_user_ids(num=config['prosumer']['general_number_of'])
 
     tx_hash = None
     # Register meters and users on database
@@ -63,7 +66,8 @@ def init_random_data(db_obj, bc_obj_market, config, bc_obj_settlement):
         bc_obj_market.register_user(df_user=df_insert)
 
         cols, types = db_obj.get_table_columns(db_obj.db_param.NAME_TABLE_INFO_METER, dtype=True)
-        col_data = [ids_meter_random[z], ids_users_random[z], "0", "virtual grid meter", '0'*10, 'green', 0, 2147483648,
+        col_data = [ids_meter_random[z], ids_users_random[z], "0", "virtual grid meter", '0' * 10, 'green', 0,
+                    2147483648,
                     'test']
         if any([type(data) != typ for data, typ in zip(col_data, types)]):
             raise TypeError("The types of data and columns do not match for the id_meter")
@@ -78,15 +82,15 @@ def init_random_data(db_obj, bc_obj_market, config, bc_obj_settlement):
     bc_obj_market.wait_for_transact(tx_hash)
 
     # Compute random market positions
-    positions = lem.create_random_positions(db_obj=db_obj,
-                                            config=config,
-                                            ids_user=ids_users_random,
-                                            n_positions=500,
-                                            verbose=False)
+    positions = create_random_positions(db_obj=db_obj,
+                                        config=config,
+                                        ids_user=ids_users_random,
+                                        n_positions=500,
+                                        verbose=False)
     # Post positions on db
     db_obj.post_positions(positions)
     # on the bc, energy quality needs to be converted to int. In the db it is stored as a string
-    positions = lem._convert_qualities_to_int(db_obj, positions, config['lem']['types_quality'])
+    positions = clearing_ex_ante._convert_qualities_to_int(db_obj, positions, config['lem']['types_quality'])
     bc_obj_market.push_all_positions(positions, temporary=True, permanent=False)
 
 
@@ -94,17 +98,17 @@ def setup_clearing_ex_ante_test(generate_random_test_data):
     config, db_obj, bc_obj_clearing_ex_ante, bc_obj_settlement = setup_test_general(generate_random_test_data)
 
     # Initialize clearing parameters
-    config_supplier = None
+    config_retailer = None
     t_override = round(time.time())
     shuffle = False
     plotting = False
     verbose = False
 
     # Clear market ex ante on db and bc
-    bc_obj_clearing_ex_ante.market_clearing_ex_ante(config["lem"], config_supplier=config_supplier,
+    bc_obj_clearing_ex_ante.market_clearing_ex_ante(config["lem"], config_retailer=config_retailer,
                                                     t_override=t_override, shuffle=shuffle, verbose=verbose)
-    lem.market_clearing(db_obj=db_obj, config_lem=config["lem"], config_supplier=config_supplier,
-                        t_override=t_override, shuffle=shuffle, plotting=plotting, verbose=verbose)
+    clearing_ex_ante.market_clearing(db_obj=db_obj, config_lem=config["lem"], config_retailer=config_retailer,
+                                     t_override=t_override, plotting=plotting, verbose=verbose)
 
     return config, db_obj, bc_obj_clearing_ex_ante, bc_obj_settlement
 
@@ -122,28 +126,26 @@ def setup_settlement_test(generate_random_test_data):
 
     # Calculate/determine balancing energies
     bc_obj_settlement.determine_balancing_energy(ts_delivery_list)
-    lem_settlement.determine_balancing_energy(db_obj, ts_delivery_list)
+    settlement.determine_balancing_energy(db_obj, ts_delivery_list)
 
-    sim_path = "C:/Users/ga47num/PycharmProjects/lemlab/scenarios/"
-    files_path = "C:/Users/ga47num/PycharmProjects/lemlab/input_data/"
+    sim_path = "../../../simulation_results/test_sim"
 
     # Set settlement prices in db and bc
-    lem_settlement.set_prices_settlement(db_obj=db_obj, path_simulation=sim_path,
-                                         files_path=files_path, list_ts_delivery=ts_delivery_list)
+    settlement.set_prices_settlement(db_obj=db_obj, path_simulation=sim_path, list_ts_delivery=ts_delivery_list)
     bc_obj_settlement.set_prices_settlement(ts_delivery_list)
 
     # Update balances according to balancing energies db and bc
     ts_now = round(time.time())
     id_retailer = "retailer01"
-    lem_settlement.update_balance_balancing_costs(db_obj=db_obj, t_now=ts_now,
-                                                  list_ts_delivery=ts_delivery_list,
-                                                  id_retailer=id_retailer, lem_config=config["lem"])
+    settlement.update_balance_balancing_costs(db_obj=db_obj, t_now=ts_now,
+                                              list_ts_delivery=ts_delivery_list,
+                                              id_retailer=id_retailer, lem_config=config["lem"])
     bc_obj_settlement.update_balance_balancing_costs(list_ts_delivery=ts_delivery_list,
                                                      ts_now=ts_now, supplier_id=id_retailer)
 
     # Update balances with levies on db and bc
-    lem_settlement.update_balance_levies(db_obj=db_obj, t_now=ts_now, list_ts_delivery=ts_delivery_list,
-                                         id_retailer=id_retailer, lem_config=config["lem"])
+    settlement.update_balance_levies(db_obj=db_obj, t_now=ts_now, list_ts_delivery=ts_delivery_list,
+                                     id_retailer=id_retailer, lem_config=config["lem"])
     bc_obj_settlement.update_balance_levies(list_ts_delivery=ts_delivery_list, ts_now=ts_now, id_retailer=id_retailer)
 
     return config, db_obj, bc_obj_clearing_ex_ante, bc_obj_settlement
@@ -166,8 +168,8 @@ def simulate_meter_readings_from_market_results(db_obj=None, rand_percent_var=15
         with open(yaml_file) as config_file:
             config = yaml.load(config_file, Loader=yaml.FullLoader)
         # Create a db connection object
-        db_obj = db_connection.DatabaseConnection(db_dict=config['db_connections']['database_connection_admin'],
-                                                  lem_config=config['lem'])
+        db_obj = DatabaseConnection(db_dict=config['db_connections']['database_connection_admin'],
+                                    lem_config=config['lem'])
         # Initialize database
         db_obj.init_db(clear_tables=False, reformat_tables=False)
 
@@ -269,18 +271,70 @@ def simulate_meter_readings_from_market_results(db_obj=None, rand_percent_var=15
     return simulated_meter_readings_delta, list_ts_delivery
 
 
-def test_ts_uint(ts_delivery):
-    timestep_size = int(15 * 60)
-    horizon = int(7 * 24 * 60 * 60 / timestep_size)
-    monday_00 = 1626040800  # reference unix time from Monday 12th July 2021 at 00:00 at Berlin timezone
-    dist = horizon * timestep_size + 1
-    div = int((ts_delivery - monday_00) / dist)
-    # we transform first the ts into a ts inside a week time starting from monday_00
-    new_ts = ts_delivery - div * dist
-    # we then calculate the index based on the distance, being monday_00 the 0 up to 672
-    rest = int(new_ts % monday_00)
-    index = int(rest / timestep_size)
-    return index
+def insert_random_positions(db_obj, config, positions, n_positions, t_d_range, ids_user):
+    positions.loc[:, db_obj.db_param.ID_USER] = random.choices(ids_user, k=n_positions)
+    positions.loc[:, db_obj.db_param.T_SUBMISSION] = [round(time.time())] * n_positions
+    positions.loc[:, db_obj.db_param.QTY_ENERGY] = random.choices(range(1, 1000, 1), k=n_positions)
+    positions.loc[:, db_obj.db_param.TYPE_POSITION] = random.choices(list(config['lem']['types_position'].values()),
+                                                                     k=n_positions)
+    positions.loc[:, db_obj.db_param.QUALITY_ENERGY] = random.choices(list(config['lem']['types_quality'].values()),
+                                                                      k=n_positions)
+    positions.loc[:, db_obj.db_param.TS_DELIVERY] = random.choices(t_d_range, k=n_positions)
+    positions.loc[:, db_obj.db_param.NUMBER_POSITION] = int(0)
+    positions.loc[:, db_obj.db_param.STATUS_POSITION] = int(0)
+    positions.loc[positions[db_obj.db_param.TYPE_POSITION] == 'offer', db_obj.db_param.PRICE_ENERGY] = [
+        int(x * db_obj.db_param.EURO_TO_SIGMA / 1000)
+        for x in random.choices(np.arange(config['retailer']['price_buy'],
+                                          config['retailer']['price_sell'], 0.0001),
+                                k=len(positions.loc[positions[db_obj.db_param.TYPE_POSITION] == 'offer', :]))]
+    positions.loc[positions[db_obj.db_param.TYPE_POSITION] == 'offer',
+                  db_obj.db_param.PREMIUM_PREFERENCE_QUALITY] = int(0)
+    positions.loc[positions[db_obj.db_param.TYPE_POSITION] == 'bid', db_obj.db_param.PRICE_ENERGY] = [
+        int(x * db_obj.db_param.EURO_TO_SIGMA / 1000)
+        for x in random.choices(np.arange(config['retailer']['price_buy'],
+                                          config['retailer']['price_sell'], 0.0001),
+                                k=len(positions.loc[positions[db_obj.db_param.TYPE_POSITION] == 'bid', :]))]
+    positions.loc[positions[db_obj.db_param.TYPE_POSITION] == 'bid',
+                  db_obj.db_param.PREMIUM_PREFERENCE_QUALITY] = random.choices(range(0, 50, 1), k=len(
+        positions.loc[positions[db_obj.db_param.TYPE_POSITION] == 'bid', :]))
+
+    return positions
+
+
+def create_random_positions(db_obj, config, ids_user, n_positions=None, verbose=False):
+    if n_positions is None:
+        n_positions = 100
+    t_start = round(time.time()) - (
+            round(time.time()) % config['lem']['interval_clearing']) + config['lem']['interval_clearing']
+    t_end = t_start + config['lem']['horizon_clearing']
+    # Range of time steps
+    t_d_range = np.arange(t_start, t_end, config['lem']['interval_clearing'])
+    # Create bid df
+    positions = pd.DataFrame(columns=db_obj.get_table_columns(db_obj.db_param.NAME_TABLE_POSITIONS_MARKET_EX_ANTE))
+    positions = insert_random_positions(db_obj, config, positions, n_positions, t_d_range, ids_user)
+
+    # Drop duplicates
+    positions = positions.drop_duplicates(
+        subset=[db_obj.db_param.ID_USER, db_obj.db_param.NUMBER_POSITION, db_obj.db_param.TYPE_POSITION,
+                db_obj.db_param.TS_DELIVERY])
+    if verbose:
+        print(pd.Timestamp.now(), 'Positions successfully written to DB')
+
+    return positions
+
+
+# Create random user ids
+def create_user_ids(num=30):
+    user_id_list = list()
+    for i in range(num):
+        # Create random user id in the form of 1234ABDS
+        user_id_int = np.random.randint(1000, 10000)
+        user_id_str = ''.join(random.sample(string.ascii_uppercase, 4))
+        user_id_random = str(user_id_int) + user_id_str
+        # Append user id to list
+        user_id_list.append(user_id_random)
+
+    return user_id_list
 
 
 if __name__ == '__main__':

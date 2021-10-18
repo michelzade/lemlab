@@ -265,7 +265,7 @@ def update_balance_balancing_costs(db_obj, t_now, lem_config, list_ts_delivery, 
 
     for ts_d in list_ts_delivery:
         # return relevant settlement prices
-        settlement_prices = db_obj.get_prices_settlement(ts_delivery_first=ts_d)
+        settlement_prices = db_obj.get_prices_settlement(ts_delivery_first=ts_d, ts_delivery_last=ts_d)
         pos_bal_ener_price = int(settlement_prices[db_obj.db_param.PRICE_ENERGY_BALANCING_POSITIVE])
         neg_bal_ener_price = int(settlement_prices[db_obj.db_param.PRICE_ENERGY_BALANCING_NEGATIVE])
         # return balancing energies
@@ -409,7 +409,7 @@ def update_balance_levies(db_obj, t_now, lem_config, list_ts_delivery, id_retail
     for ts_d in list_ts_delivery:
         # get meter readings and levy prices
         meter_readings_delta = db_obj.get_meter_readings_by_type(ts_delivery=ts_d, types_meters=[4, 5])
-        settlement_prices = db_obj.get_prices_settlement(ts_delivery_first=ts_d)
+        settlement_prices = db_obj.get_prices_settlement(ts_delivery_first=ts_d, ts_delivery_last=ts_d)
         levies_pos = int(settlement_prices[db_obj.db_param.PRICE_ENERGY_LEVIES_POSITIVE])
         levies_neg = int(settlement_prices[db_obj.db_param.PRICE_ENERGY_LEVIES_NEGATIVE])
         # for each main meter reading, construct transaction

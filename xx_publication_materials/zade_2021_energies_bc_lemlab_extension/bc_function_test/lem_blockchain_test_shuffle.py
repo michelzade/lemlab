@@ -1,7 +1,7 @@
 import pytest
 
 from lemlab.platform.blockchain_tests import test_utils
-from lemlab.bc_connection.bc_connection import BlockchainConnection
+from xx_publication_materials.zade_2021_energies_bc_lemlab_extension.bc_connection import BlockchainConnection
 
 offers_blockchain_archive, bids_blockchain_archive = None, None
 open_offers_blockchain, open_bids_blockchain = None, None

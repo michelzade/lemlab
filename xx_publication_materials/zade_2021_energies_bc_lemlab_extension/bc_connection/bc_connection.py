@@ -1,11 +1,10 @@
-import lemlab.bc_connection.bc_param as bc_param
+import xx_publication_materials.zade_2021_energies_bc_lemlab_extension.bc_connection.bc_param as bc_param
 import time
 import json
 import os
 import re
 from web3 import Web3, HTTPProvider
 import pandas as pd
-from pathlib import Path
 
 
 class BlockchainConnection:
@@ -14,12 +13,10 @@ class BlockchainConnection:
 
     def __init__(self, bc_dict):
         try:
-            web3_instance = Web3(HTTPProvider("http://" + bc_dict.get("host") + ":"
-                                              + bc_dict.get("port"),
+            web3_instance = Web3(HTTPProvider("http://" + bc_dict.get("host") + ":" + bc_dict.get("port"),
                                               request_kwargs={'timeout': bc_dict.get("timeout")}))
             # getting abi, bytecode, address via json file created by truffle
-            json_path = os.path.join(str(Path(__file__).parent.parent.parent), 'Truffle', 'build', 'contracts',
-                                     bc_dict.get("contract_name") + '.json')
+            json_path = os.path.join(bc_dict["path_abi"], bc_dict.get("contract_name") + '.json')
             with open(json_path) as json_file:
                 data = json.load(json_file)
             contract_bytecode = data['bytecode']
@@ -312,7 +309,7 @@ class BlockchainConnection:
 
     def market_clearing_ex_ante(self,
                                 config_lem,
-                                config_supplier=None,
+                                config_retailer=None,
                                 t_override=None,
                                 shuffle=False,
                                 verbose=True):
@@ -326,10 +323,10 @@ class BlockchainConnection:
         n_clearings_done = 0
         simulation_test = True
 
-        if config_supplier is None:
-            supplier_bids = False
+        if config_retailer is None:
+            retailer_bids = False
         else:
-            supplier_bids = True
+            retailer_bids = True
 
         if "uniform" in config_lem["types_pricing_ex_ante"].values():
             uniform_pricing = True
@@ -347,7 +344,7 @@ class BlockchainConnection:
             t_clearing = t_override
 
         # Check whether clearing for all ts_delivery can be performed in one block or must be split up
-        max_n_clearings_per_block = self.find_limit(n_clearings, t_clearing_first, supplier_bids,
+        max_n_clearings_per_block = self.find_limit(n_clearings, t_clearing_first, retailer_bids,
                                                     uniform_pricing, discriminative_pricing, t_clearing,
                                                     gasThreshold=250000000,
                                                     interval_clearing=interval_clearing,
@@ -365,7 +362,7 @@ class BlockchainConnection:
                 # Performing the market clearing for a number of clearings
                 tx_hash = self.functions.market_clearing(int(n_clearings_current),
                                                          int(t_clearing_current),
-                                                         supplier_bids, uniform_pricing,
+                                                         retailer_bids, uniform_pricing,
                                                          discriminative_pricing,
                                                          int(interval_clearing),
                                                          int(t_clearing),

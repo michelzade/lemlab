@@ -1,7 +1,7 @@
 import pytest
 import time
 from lemlab.db_connection import db_param
-from lemlab.bc_connection.bc_connection import BlockchainConnection
+from xx_publication_materials.zade_2021_energies_bc_lemlab_extension.bc_connection import BlockchainConnection
 from lemlab.platform.blockchain_tests import test_utils
 from lemlab.platform.lem import _convert_qualities_to_int
 
