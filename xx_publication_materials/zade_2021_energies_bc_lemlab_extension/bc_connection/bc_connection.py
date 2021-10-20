@@ -233,13 +233,13 @@ class BlockchainConnection:
     # Functions for the market bid submission table
     # Market participants only
 
-    def get_open_positions(self, isOffer=True, returnBoth=False, temp=True, user_id="", return_list=False):
+    def get_open_positions(self, only_offers=False, return_all=True, temp=True, user_id="", return_list=False):
         """
 
         Parameters
         ----------
-        isOffer:bool: wether to return an offer or a Bid
-        returnBoth:bool: to return both the offers and the bids
+        only_offers: bool: whether to return only offers or only bids
+        return_all: bool: to return both the offers and the bids
         temp: if the temporal data or the permanent data are to be retrieved
         user_id: if an specific user_id positions are to be retrieved
         return_list: if the positions are to be retrieved as a List or Dataframe(default)
@@ -249,12 +249,12 @@ class BlockchainConnection:
         A list or Dataframe containing all the offers/bids
         """
 
-        if isOffer:
+        if only_offers:
             position_list = self.functions.getOffers(temp).call()
         else:
             position_list = self.functions.getBids(temp).call()
 
-        if returnBoth:
+        if return_all:
             position_list = self.functions.getOffers(temp).call() + \
                             self.functions.getBids(temp).call()
 
@@ -393,8 +393,8 @@ class BlockchainConnection:
         except:
             # exceptions happens when the cost of deletion is too big. then we have to delete chunk by chunk
             limit_to_remove = 500
-            while len(self.get_open_positions(isOffer=True, temp=True, return_list=True)) > 0 or \
-                    len(self.get_open_positions(isOffer=False, temp=True, return_list=True)) > 0 or \
+            while len(self.get_open_positions(only_offers=True, temp=True, return_list=True)) > 0 or \
+                    len(self.get_open_positions(only_offers=False, temp=True, return_list=True)) > 0 or \
                     len(self.functions.getTempMarketResults().call()) > 0 or \
                     len(self.functions.getMarketResultsTotal().call()) > 0:
                 try:
@@ -413,8 +413,8 @@ class BlockchainConnection:
             # exceptions happens when the cost of deletion is too big. then we have to delete chunk by chunk
             # 500 entries are to be removed, in the future, to be replaced by some gas estimation function
             limit_to_remove = 500
-            while len(self.get_open_positions(isOffer=True, temp=False, return_list=True)) > 0 or \
-                    len(self.get_open_positions(isOffer=False, temp=False, return_list=True)) > 0 or \
+            while len(self.get_open_positions(only_offers=True, temp=False, return_list=True)) > 0 or \
+                    len(self.get_open_positions(only_offers=False, temp=False, return_list=True)) > 0 or \
                     len(self.functions.get_user_infos().call()) or \
                     len(self.functions.get_id_meters().call()):
                 try:

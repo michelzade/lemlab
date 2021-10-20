@@ -85,12 +85,12 @@ def init_random_data(db_obj, bc_obj_market, config, bc_obj_settlement):
     positions = create_random_positions(db_obj=db_obj,
                                         config=config,
                                         ids_user=ids_users_random,
-                                        n_positions=500,
+                                        n_positions=100,
                                         verbose=False)
     # Post positions on db
     db_obj.post_positions(positions)
     # on the bc, energy quality needs to be converted to int. In the db it is stored as a string
-    positions = clearing_ex_ante._convert_qualities_to_int(db_obj, positions, config['lem']['types_quality'])
+    positions = _convert_qualities_to_int(db_obj, positions, config['lem']['types_quality'])
     bc_obj_market.push_all_positions(positions, temporary=True, permanent=False)
 
 
@@ -108,7 +108,7 @@ def setup_clearing_ex_ante_test(generate_random_test_data):
     bc_obj_clearing_ex_ante.market_clearing_ex_ante(config["lem"], config_retailer=config_retailer,
                                                     t_override=t_override, shuffle=shuffle, verbose=verbose)
     clearing_ex_ante.market_clearing(db_obj=db_obj, config_lem=config["lem"], config_retailer=config_retailer,
-                                     t_override=t_override, plotting=plotting, verbose=verbose)
+                                     t_override=t_override, plotting=plotting, verbose=verbose, rounding_method=False)
 
     return config, db_obj, bc_obj_clearing_ex_ante, bc_obj_settlement
 
@@ -335,6 +335,14 @@ def create_user_ids(num=30):
         user_id_list.append(user_id_random)
 
     return user_id_list
+
+
+def _convert_qualities_to_int(db_obj, positions, dict_types):
+    dict_types_inverted = {v: k for k, v in dict_types.items()}
+    positions = positions.assign(**{db_obj.db_param.QUALITY_ENERGY: [dict_types_inverted[i] for i in
+                                                                     positions[db_obj.db_param.QUALITY_ENERGY]]})
+
+    return positions
 
 
 if __name__ == '__main__':

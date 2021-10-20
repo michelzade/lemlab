@@ -26,7 +26,8 @@ def market_clearing(db_obj,
                     config_retailer=None,
                     t_override=None,
                     plotting=False,
-                    verbose=False):
+                    verbose=False,
+                    rounding_method=True):
     """
     Function clears all offers and bids from database and writes stores unmatched and matched bids back in database.
     @param db_obj: database connection object
@@ -35,6 +36,7 @@ def market_clearing(db_obj,
     @param t_override: defines the current time, mostly used for simulation purpose [unix time]
     @param plotting: boolean value to visualize clearing results
     @param verbose: boolean value to print updates to console
+    @param rounding_method: boolean value to indicate whether shares shall be rounded or not
     """
     # If t_now is not set, then current time
     if t_override is None:
@@ -126,7 +128,8 @@ def market_clearing(db_obj,
                                      offers_ts_d,
                                      bids_ts_d,
                                      plotting=plotting,
-                                     plotting_title=plotting_title)
+                                     plotting_title=plotting_title,
+                                     rounding_method=rounding_method)
 
                 if 'h2l' == type_clearing:
                     positions_cleared, offers_uncleared, bids_uncleared, offers_cleared, bids_cleared = \
@@ -951,7 +954,8 @@ def clearing_pda(db_obj,
                  add_premium=False,
                  plotting=False,
                  plotting_title=None,
-                 plotting_ylim=None):
+                 plotting_ylim=None,
+                 rounding_method=True):
     """
     Function clears offers and bids with a double sided auction
     @param db_obj: DatabaseConnection object
@@ -964,6 +968,7 @@ def clearing_pda(db_obj,
     @param plotting: boolean value to plot clearing results
     @param plotting_title: title of plot, ignored if plotting is false
     @param plotting_ylim: list of two values to predefine limits of y axis
+    @param rounding_method: boolean to indicate whether shares shall be rounded or not
     @return: returns cleared and uncleared bids and offers in multiple dataframes
     """
     offers_uncleared = pd.DataFrame()
@@ -1037,7 +1042,7 @@ def clearing_pda(db_obj,
                           positions_cleared[db_obj.db_param.PRICE_ENERGY_BID].iloc[-1]) / 2).astype(int)
 
                 # Calculate discriminative prices if demanded
-                if 'discriminatory' == config_lem['types_pricing_ex_ante'][i]:
+                if 'discriminative' == config_lem['types_pricing_ex_ante'][i]:
                     positions_cleared.loc[:, db_obj.db_param.PRICE_ENERGY_MARKET_ + type_pricing] = \
                         ((positions_cleared[db_obj.db_param.PRICE_ENERGY_OFFER] +
                           positions_cleared[db_obj.db_param.PRICE_ENERGY_BID].iloc[:]) / 2).astype(int)
@@ -1062,26 +1067,57 @@ def clearing_pda(db_obj,
                                                            positions_merged=positions_cleared,
                                                            extension=db_obj.db_param.EXTENSION_BID)
 
+            share_non_lowest_quality = 0
+            share_non_lowest_preference = 0
             # Calculate shares of labelled energy of cleared positions
             for i in config_lem['types_quality']:
                 type_quality = config_lem['types_quality'][i]
-                # Shares of offers in cleared positions
-                positions_cleared_quality_offer = positions_cleared.loc[
-                    positions_cleared[db_obj.db_param.QUALITY_ENERGY_OFFER] == i]
-                qty_energy_cleared_quality_offer = positions_cleared_quality_offer[
-                    db_obj.db_param.QTY_ENERGY_TRADED].sum()
-                positions_cleared = positions_cleared.assign(
-                    **{db_obj.db_param.SHARE_QUALITY_OFFERS_CLEARED_ + type_quality: round(
-                        qty_energy_cleared_quality_offer / qty_energy_cleared * 100)})
-                if config_lem['share_quality_logging_extended']:
-                    # Shares of preferences in cleared positions
-                    positions_cleared_preference_bid = positions_cleared.loc[
-                        positions_cleared[db_obj.db_param.QUALITY_ENERGY_BID] == i]
-                    qty_energy_cleared_preference_bid = positions_cleared_preference_bid[
+                if i == 0:
+                    continue
+                else:
+                    # Shares of offers in cleared positions
+                    positions_cleared_quality_offer = positions_cleared.loc[
+                        positions_cleared[db_obj.db_param.QUALITY_ENERGY_OFFER] == i]
+                    qty_energy_cleared_quality_offer = positions_cleared_quality_offer[
                         db_obj.db_param.QTY_ENERGY_TRADED].sum()
-                    positions_cleared = positions_cleared.assign(
-                        **{db_obj.db_param.SHARE_PREFERENCE_BIDS_CLEARED_ + type_quality: round(
-                            qty_energy_cleared_preference_bid / qty_energy_cleared * 100)})
+                    if rounding_method:
+                        share_non_lowest_quality = share_non_lowest_quality + round(
+                            qty_energy_cleared_quality_offer / qty_energy_cleared * 100)
+                        positions_cleared = positions_cleared.assign(
+                            **{db_obj.db_param.SHARE_QUALITY_OFFERS_CLEARED_ + type_quality: round(
+                                qty_energy_cleared_quality_offer / qty_energy_cleared * 100)})
+                    else:
+                        share_non_lowest_quality = share_non_lowest_quality + int(
+                            qty_energy_cleared_quality_offer / qty_energy_cleared * 100)
+                        positions_cleared = positions_cleared.assign(
+                            **{db_obj.db_param.SHARE_QUALITY_OFFERS_CLEARED_ + type_quality: int(
+                                qty_energy_cleared_quality_offer / qty_energy_cleared * 100)})
+                    if config_lem['share_quality_logging_extended']:
+                        # Shares of preferences in cleared positions
+                        positions_cleared_preference_bid = positions_cleared.loc[
+                            positions_cleared[db_obj.db_param.QUALITY_ENERGY_BID] == i]
+                        qty_energy_cleared_preference_bid = positions_cleared_preference_bid[
+                            db_obj.db_param.QTY_ENERGY_TRADED].sum()
+                        if rounding_method:
+                            share_non_lowest_preference = share_non_lowest_preference + round(
+                                qty_energy_cleared_preference_bid / qty_energy_cleared * 100)
+                            positions_cleared = positions_cleared.assign(
+                                **{db_obj.db_param.SHARE_PREFERENCE_BIDS_CLEARED_ + type_quality: round(
+                                    qty_energy_cleared_preference_bid / qty_energy_cleared * 100)})
+                        else:
+                            share_non_lowest_preference = share_non_lowest_preference + int(
+                                qty_energy_cleared_preference_bid / qty_energy_cleared * 100)
+                            positions_cleared = positions_cleared.assign(
+                                **{db_obj.db_param.SHARE_PREFERENCE_BIDS_CLEARED_ + type_quality: int(
+                                    qty_energy_cleared_preference_bid / qty_energy_cleared * 100)})
+
+            positions_cleared = positions_cleared.assign(
+                **{db_obj.db_param.SHARE_QUALITY_OFFERS_CLEARED_ + config_lem['types_quality'][0]:
+                       100 - share_non_lowest_quality})
+            if config_lem['share_quality_logging_extended']:
+                positions_cleared = positions_cleared.assign(
+                    **{db_obj.db_param.SHARE_PREFERENCE_BIDS_CLEARED_ + config_lem['types_quality'][0]:
+                           100 - share_non_lowest_preference})
 
         # Drop duplicate ts_delivery column
         positions_cleared = positions_cleared.rename(columns={'ts_delivery_offer': 'ts_delivery'})

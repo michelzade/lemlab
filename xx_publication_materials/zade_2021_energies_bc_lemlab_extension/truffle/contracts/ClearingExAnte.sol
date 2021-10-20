@@ -558,32 +558,36 @@ contract ClearingExAnte {
             temp_market_results_final[i].qty_energy_bid = qties_energy_traded[i];
             temp_market_results_final[i].qty_energy_traded = qties_energy_traded[i];
         }
-        temp_market_results_final = addTypesQuality_share(temp_market_results_final);
+        temp_market_results_final = add_quality_shares(temp_market_results_final);
 
 	    return temp_market_results_final;
 	}
 	//it calculates the share of source of energy, for every single match offer/bid
-	function addTypesQuality_share(Lb.LemLib.market_result[] memory temp_market_results_m) public pure returns(Lb.LemLib.market_result[] memory) {
+	function add_quality_shares(Lb.LemLib.market_result[] memory temp_market_results_m) public pure returns(Lb.LemLib.market_result[] memory) {
 		//{0: 'NA', 1: 'local', 2: 'green', 3: 'green_local'}
-        uint qty = 0;
-        uint sum_qty_energy_traded = 0;
-        uint share_type_na = 0;
-        uint share_type_local = 0;
-        uint share_type_green = 0;
-        uint share_type_green_local = 0;
+        uint qty_traded = 0;
+        uint total_qty_traded = 0;
+        uint total_qty_type_na = 0;
+        uint total_qty_type_local = 0;
+        uint total_qty_type_green = 0;
+        uint total_qty_type_green_local = 0;
         for(uint i = 0; i < temp_market_results_m.length; i++) {
-        	qty = temp_market_results_m[i].qty_energy_traded;
-        	sum_qty_energy_traded = sum_qty_energy_traded + qty;
-    		if(temp_market_results_m[i].quality_energy_offer == 0) share_type_na = share_type_na + qty;
-    		else if(temp_market_results_m[i].quality_energy_offer == 1) share_type_local = share_type_local + qty;
-    		else if(temp_market_results_m[i].quality_energy_offer == 2) share_type_green = share_type_green + qty;
-    		else if(temp_market_results_m[i].quality_energy_offer == 3) share_type_green_local = share_type_green_local + qty;
+        	qty_traded = temp_market_results_m[i].qty_energy_traded;
+        	total_qty_traded = total_qty_traded + qty_traded;
+    		if(temp_market_results_m[i].quality_energy_offer == 0) total_qty_type_na = total_qty_type_na + qty_traded;
+    		else if(temp_market_results_m[i].quality_energy_offer == 1) total_qty_type_local = total_qty_type_local + qty_traded;
+    		else if(temp_market_results_m[i].quality_energy_offer == 2) total_qty_type_green = total_qty_type_green + qty_traded;
+    		else if(temp_market_results_m[i].quality_energy_offer == 3) total_qty_type_green_local = total_qty_type_green_local + qty_traded;
     	}
+		uint share_quality_local = (total_qty_type_local * 100) / total_qty_traded;
+		uint share_quality_green = (total_qty_type_green * 100) / total_qty_traded;
+		uint share_quality_green_local = (total_qty_type_green_local * 100) / total_qty_traded;
+		uint share_quality_NA = 100 - (share_quality_local + share_quality_green + share_quality_green_local);
     	for(uint i = 0; i < temp_market_results_m.length; i++) {
-    		temp_market_results_m[i].share_quality_NA = (share_type_na * 100) / sum_qty_energy_traded;
-    		temp_market_results_m[i].share_quality_local = (share_type_local * 100) / sum_qty_energy_traded;
-    		temp_market_results_m[i].share_quality_green = (share_type_green * 100) / sum_qty_energy_traded;
-    		temp_market_results_m[i].share_quality_green_local = (share_type_green_local * 100) / sum_qty_energy_traded;
+    		temp_market_results_m[i].share_quality_NA = share_quality_NA;
+    		temp_market_results_m[i].share_quality_local = share_quality_local;
+    		temp_market_results_m[i].share_quality_green = share_quality_green;
+    		temp_market_results_m[i].share_quality_green_local = share_quality_green_local;
     	}
     	return temp_market_results_m;
 	}

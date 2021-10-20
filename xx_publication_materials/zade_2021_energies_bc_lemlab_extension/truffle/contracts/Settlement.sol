@@ -312,8 +312,8 @@ contract Settlement {
 			return;
 		}
 		Lb.LemLib.price_settlement memory price;
-		price.price_energy_balancing_positive=15e4;
-		price.price_energy_balancing_negative=15e4;
+		price.price_energy_balancing_positive=10e4;
+		price.price_energy_balancing_negative=10e4;
 		price.price_energy_levies_positive=0;
 		price.price_energy_levies_negative=18e4;
 		for(uint i=0; i<list_ts_delivery.length; i++){

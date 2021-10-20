@@ -79,7 +79,7 @@ lem:
                                             # deletion
   "clearing_blockchain": true               # true-> the positions are also deleted from the blockchain
 
-  "horizon_clearing": 9000                  # seconds, how far into the future is the market cleared?
+  "horizon_clearing": 900                  # seconds, how far into the future is the market cleared?
 
   # these two parameters are currently not implemented
   "interval_clearing": 900                  # seconds, length of one energy delivery period (ts_delivery)
@@ -155,7 +155,7 @@ prosumer:
 
   ################################ general settings ################################
 
-  "general_number_of": 20                   # number of prosumers (single family homes) to simulate
+  "general_number_of": 40                   # number of prosumers (single family homes) to simulate
 
   "general_solver": "gurobi"                # installed pyomo compatible solver
                                             # preferably miqp capable, e.g. "gurobi" and "cplex"
