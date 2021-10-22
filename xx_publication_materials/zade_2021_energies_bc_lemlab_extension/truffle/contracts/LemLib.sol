@@ -146,21 +146,21 @@ contract LemLib {
     //return true if a list of user infos has at least one user with id_user as the argument given in input
     function check_user_id_in_user_infos(string memory id_user, user[] memory user_infos) public pure returns(bool) {
         for(uint i = 0; i < user_infos.length; i++) {
-            if(compareStrings(user_infos[i].id_user, id_user)) return true;
+            if(compare_strings(user_infos[i].id_user, id_user)) return true;
         }
         return false;
     }
     //same as check_user_id_in_user_infos. it also checks if ts_delivery is between ts_delivery_first and ts_delivery_last of the user
     function check_user_id_in_user_infos_interval(string memory id_user, uint ts_delivery, user[] memory user_infos) public pure returns(bool) {
         for(uint i = 0; i < user_infos.length; i++) {
-            if(compareStrings(user_infos[i].id_user, id_user)) {
+            if(compare_strings(user_infos[i].id_user, id_user)) {
                 return (user_infos[i].ts_delivery_first <= ts_delivery && ts_delivery <= user_infos[i].ts_delivery_last);
             }
         }
         return false;
     }
     //return true if the two strings given in input have the same value
-    function compareStrings(string memory a, string memory b) public pure returns (bool) {
+    function compare_strings(string memory a, string memory b) public pure returns (bool) {
         return (keccak256(abi.encode((a))) == keccak256(abi.encode((b))));
     }
     //converts a string to bytes32

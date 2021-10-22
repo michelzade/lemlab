@@ -243,10 +243,10 @@ contract Settlement {
 				int main_meter_energy_net = int(meter_readings_delta_ts_d[j].energy_out) - int(meter_readings_delta_ts_d[j].energy_in);
 				int current_market_energy = 0;
 				for(uint k=0; k< market_results_ts_d.length; k++){
-					if(lib.compareStrings(meter_readings_delta_ts_d[j].id_meter, clearing.get_main_meter_id(market_results_ts_d[k].id_user_bid))){
+					if(lib.compare_strings(meter_readings_delta_ts_d[j].id_meter, clearing.get_main_meter_id(market_results_ts_d[k].id_user_bid))){
 						current_market_energy -=  int(market_results_ts_d[k].qty_energy_traded);
 					}
-					else if(lib.compareStrings(meter_readings_delta_ts_d[j].id_meter, clearing.get_main_meter_id(market_results_ts_d[k].id_user_offer))){
+					else if(lib.compare_strings(meter_readings_delta_ts_d[j].id_meter, clearing.get_main_meter_id(market_results_ts_d[k].id_user_offer))){
 						current_market_energy += int(market_results_ts_d[k].qty_energy_traded);
 					}
 				}

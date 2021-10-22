@@ -251,13 +251,13 @@ class BlockchainConnection:
         """
 
         if only_offers:
-            position_list = self.functions.getOffers(temp).call()
+            position_list = self.functions.get_offers(temp).call()
         else:
-            position_list = self.functions.getBids(temp).call()
+            position_list = self.functions.get_bids(temp).call()
 
         if return_all:
-            position_list = self.functions.getOffers(temp).call() + \
-                            self.functions.getBids(temp).call()
+            position_list = self.functions.get_offers(temp).call() + \
+                            self.functions.get_bids(temp).call()
 
         if return_list:
             return position_list
@@ -282,10 +282,10 @@ class BlockchainConnection:
         tx_hash: the transaction hash of the operation
         """
         if df_position["type_position"] == "offer":
-            tx_hash = self.functions.pushOfferOrBid(tuple(df_position.values),
+            tx_hash = self.functions.push_offer_bid(tuple(df_position.values),
                                                     True, temp, permament).transact({'from': self.coinbase})
         elif df_position["type_position"] == "bid":
-            tx_hash = self.functions.pushOfferOrBid(tuple(df_position.values),
+            tx_hash = self.functions.push_offer_bid(tuple(df_position.values),
                                                     False, temp, permament).transact({'from': self.coinbase})
         else:
             print("Position type is not valid")
@@ -389,17 +389,17 @@ class BlockchainConnection:
     # clears temporal data (offers, bids, market results)
     def clear_temp_data(self):
         try:
-            tx_hash = self.functions.clearTempData().transact({'from': self.coinbase})
+            tx_hash = self.functions.clear_temp_data().transact({'from': self.coinbase})
             self.wait_for_transact(tx_hash)
         except:
             # exceptions happens when the cost of deletion is too big. then we have to delete chunk by chunk
             limit_to_remove = 500
             while len(self.get_open_positions(only_offers=True, temp=True, return_list=True)) > 0 or \
                     len(self.get_open_positions(only_offers=False, temp=True, return_list=True)) > 0 or \
-                    len(self.functions.getTempMarketResults().call()) > 0 or \
-                    len(self.functions.getMarketResultsTotal().call()) > 0:
+                    len(self.functions.get_temp_market_results().call()) > 0 or \
+                    len(self.functions.get_market_results_total().call()) > 0:
                 try:
-                    tx_hash = self.functions.clearTempData_gas_limit(limit_to_remove).transact({'from': self.coinbase})
+                    tx_hash = self.functions.clear_temp_data_gas_limit(limit_to_remove).transact({'from': self.coinbase})
                     self.wait_for_transact(tx_hash)
                 except:
                     limit_to_remove -= 50
@@ -408,7 +408,7 @@ class BlockchainConnection:
 
     def clear_permanent_data(self):
         try:
-            tx_hash = self.functions.clearPermanentData().transact({'from': self.coinbase})
+            tx_hash = self.functions.clear_permanent_data().transact({'from': self.coinbase})
             self.wait_for_transact(tx_hash)
         except:
             # exceptions happens when the cost of deletion is too big. then we have to delete chunk by chunk
@@ -419,7 +419,7 @@ class BlockchainConnection:
                     len(self.functions.get_user_infos().call()) or \
                     len(self.functions.get_info_meters().call()):
                 try:
-                    tx_hash = self.functions.clearPermanentData_gas_limit(limit_to_remove).transact(
+                    tx_hash = self.functions.clear_permanent_data_gas_limit(limit_to_remove).transact(
                         {'from': self.coinbase})
                     self.wait_for_transact(tx_hash)
                 except:

@@ -1,40 +1,19 @@
 import pytest
+import test_utils
 import numpy as np
-from tqdm import tqdm
+from lemlab.lem.clearing_ex_ante import _convert_qualities_to_int, _aggregate_identical_positions
 
-from lemlab.db_connection import db_param
-from lemlab.platform.blockchain_tests import test_utils
-from lemlab.platform.lem import _aggregate_identical_positions, \
-    _convert_qualities_to_int
-
-offers_blockchain_archive, bids_blockchain_archive = None, None
-open_offers_blockchain, open_bids_blockchain = None, None
-offers_db_archive, bids_db_archive = None, None
-open_offers_db, open_bids_db = None, None
-generate_bids_offer = True
-user_infos_blockchain = None
-user_infos_db = None
-id_meters_blockchain = None
-id_meters_db = None
 config = None
-quality_index = None
-price_index = None
 db_obj = None
-bc_obj = None
+bc_obj_clearing_ex_ante = None
 
-verbose = False
 
-#this method is executed before all the others, to get useful global variables, needed for the tests
 @pytest.fixture(scope="session", autouse=True)
-def setUp():
-    global offers_blockchain_archive, bids_blockchain_archive, open_offers_blockchain, open_bids_blockchain, \
-        offers_db_archive, bids_db_archive, open_offers_db, open_bids_db, user_infos_blockchain, user_infos_db, \
-        id_meters_blockchain, id_meters_db, config, quality_energy, price_index, db_obj, bc_obj
-    offers_blockchain_archive, bids_blockchain_archive, open_offers_blockchain, open_bids_blockchain, offers_db_archive, \
-    bids_db_archive, open_offers_db, open_bids_db, user_infos_blockchain, user_infos_db, id_meters_blockchain, \
-    id_meters_db, config, quality_energy, price_index, db_obj, bc_obj = test_utils.setUp_test(generate_bids_offer)
+def setup():
+    global config, db_obj, bc_obj_clearing_ex_ante
+    config, db_obj, bc_obj_clearing_ex_ante, _ = test_utils.setup_test_general(generate_random_test_data=True)
 
-#this test, tests that the operation of merge produces the same results on blockchain and python, for each ts_delivery
+
 def test_merge():
     # t_now = round(time.time())
     t_now = 1592791800
@@ -47,11 +26,7 @@ def test_merge():
     # Set first clearing interval to next clearing interval period (ceil up to next clearing interval)
     t_clearing_first = t_now - (t_now % config['lem']['interval_clearing']) + config['lem']['interval_clearing']
 
-    # Go through all specified number of clearings
-    if verbose:
-        iterations = tqdm(range(1, n_clearings + 1))
-    else:
-        iterations = range(1, n_clearings + 1)
+    iterations = range(1, n_clearings + 1)
 
     global open_bids_db, open_offers_db
     open_bids_db = _convert_qualities_to_int(db_obj, open_bids_db, config['lem']['types_quality'])
@@ -61,10 +36,11 @@ def test_merge():
         print("i: " + str(i))
         t_clearing_current = t_clearing_first + config['lem']['interval_clearing'] * i
         merge_python = apply_merge_python(t_clearing_current)
-        curr_clearing_offers_blockchain, curr_clearing_bids_blockchain = bc_obj.functions.filter_sort_aggregate_OffersBids_memory(
-            t_clearing_current, True).call()
-        merge_blockchain = bc_obj.functions.merge_offers_bids_memory(curr_clearing_offers_blockchain,
-                                                                               curr_clearing_bids_blockchain).call()
+        curr_clearing_offers_blockchain, curr_clearing_bids_blockchain = \
+            bc_obj_clearing_ex_ante.functions.filter_sort_aggregate_OffersBids_memory(t_clearing_current, True).call()
+        merge_blockchain = \
+            bc_obj_clearing_ex_ante.functions.merge_offers_bids_memory(curr_clearing_offers_blockchain,
+                                                                       curr_clearing_bids_blockchain).call()
         # assert merge_blockchain == merge_blockchain_second
         assert (merge_python is None and len(merge_blockchain) == 0) or (len(merge_blockchain) == len(merge_python))
         if len(merge_blockchain) > 0:
@@ -74,8 +50,8 @@ def test_merge():
 
 def apply_merge_python(t_clearing_current):
     positions_cleared = None
-    curr_clearing_offers_db = open_offers_db[open_offers_db[db_param.TS_DELIVERY] == t_clearing_current]
-    curr_clearing_bids_db = open_bids_db[open_bids_db[db_param.TS_DELIVERY] == t_clearing_current]
+    curr_clearing_offers_db = open_offers_db[open_offers_db[db_obj.db_param.TS_DELIVERY] == t_clearing_current]
+    curr_clearing_bids_db = open_bids_db[open_bids_db[db_obj.db_param.TS_DELIVERY] == t_clearing_current]
 
     if not curr_clearing_offers_db.empty and not curr_clearing_bids_db.empty:
 
@@ -95,11 +71,11 @@ def apply_merge_python(t_clearing_current):
                                                                          db_obj.db_param.ID_USER])
 
         offers_sorted = curr_clearing_offers_db.sort_values(
-            by=[db_obj.db_param.PRICE_ENERGY, db_obj.db_param.QUALITY_ENERGY, db_param.QTY_ENERGY],
+            by=[db_obj.db_param.PRICE_ENERGY, db_obj.db_param.QUALITY_ENERGY, db_obj.db_param.QTY_ENERGY],
             ascending=[True, False, False],
             ignore_index=True)
         bids_sorted = curr_clearing_bids_db.sort_values(
-            by=[db_obj.db_param.PRICE_ENERGY, db_obj.db_param.QUALITY_ENERGY, db_param.QTY_ENERGY],
+            by=[db_obj.db_param.PRICE_ENERGY, db_obj.db_param.QUALITY_ENERGY, db_obj.db_param.QTY_ENERGY],
             ascending=[False, False, False],
             ignore_index=True)
         # Set index of bids and offers to cumulated energy qty sums
