@@ -1,14 +1,11 @@
 import pytest
-import pandas as pd
 import test_utils
-import random
+import pandas as pd
 
 config = None
 db_obj = None
 bc_obj_clearing_ex_ante = None
 bc_obj_settlement = None
-
-random.seed(0)
 
 # this method is executed before all the others, to get useful global variables, needed for the tests
 @pytest.fixture(scope="session", autouse=True)
