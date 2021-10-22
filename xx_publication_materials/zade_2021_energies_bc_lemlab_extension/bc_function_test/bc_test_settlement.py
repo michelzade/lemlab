@@ -1,13 +1,14 @@
 import pytest
 import pandas as pd
 import test_utils
-import bc_test_market_clearing_ex_ante
+import random
 
 config = None
 db_obj = None
 bc_obj_clearing_ex_ante = None
 bc_obj_settlement = None
 
+random.seed(0)
 
 # this method is executed before all the others, to get useful global variables, needed for the tests
 @pytest.fixture(scope="session", autouse=True)
@@ -38,20 +39,6 @@ def test_clearing_results_ex_ante():
 
     # Check whether market results are equal on db and bc
     pd.testing.assert_frame_equal(clearing_ex_ante_results_bc, clearing_ex_ante_results_db, check_dtype=False)
-
-    # Get user infos from db and bc
-    info_user_db = db_obj.get_info_user()
-    info_user_db = info_user_db.sort_values(
-        by=[db_obj.db_param.BALANCE_ACCOUNT, db_obj.db_param.ID_USER, db_obj.db_param.T_UPDATE_BALANCE])
-    info_user_db = info_user_db.reset_index(drop=True)
-
-    info_user_bc = bc_obj_clearing_ex_ante.get_list_all_users()
-    info_user_bc = info_user_bc.sort_values(
-        by=[db_obj.db_param.BALANCE_ACCOUNT, db_obj.db_param.ID_USER, db_obj.db_param.T_UPDATE_BALANCE])
-    info_user_bc = info_user_bc.reset_index(drop=True)
-
-    # Check whether balances are equal after market clearing on db and bc
-    pd.testing.assert_frame_equal(info_user_db, info_user_bc)
 
 
 def test_meter_readings():
@@ -139,3 +126,15 @@ def test_user_info():
     info_user_bc = info_user_bc.reset_index(drop=True)
 
     pd.testing.assert_frame_equal(info_user_db, info_user_bc)
+
+
+def test_meter_info():
+    info_meter_db = db_obj.get_info_meter()
+    info_meter_db = info_meter_db.sort_values(by=[db_obj.db_param.ID_METER])
+    info_meter_db = info_meter_db.reset_index(drop=True)
+
+    info_meter_bc = bc_obj_clearing_ex_ante.get_list_all_meters()
+    info_meter_bc = info_meter_bc.sort_values(by=[db_obj.db_param.ID_METER])
+    info_meter_bc = info_meter_bc.reset_index(drop=True)
+
+    pd.testing.assert_frame_equal(info_meter_db, info_meter_bc)

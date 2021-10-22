@@ -60,7 +60,7 @@ contract LemLib {
         uint share_quality_green_local;
         uint t_cleared;
     }
-    struct user_info {
+    struct user {
             string id_user;
             int balance_account;
             uint t_update_balance;
@@ -74,7 +74,7 @@ contract LemLib {
             uint ts_delivery_first;
             uint ts_delivery_last;
     }
-    struct id_meter {
+    struct meter {
         string id_meter;
         string id_user;
         string id_meter_super;       // (order changed)
@@ -94,26 +94,26 @@ contract LemLib {
     struct meter_reading_delta {
         uint ts_delivery;
         string id_meter;
-        uint energy_in;
-        uint energy_out;
+        int energy_in;
+        int energy_out;
     }
     struct energy_balancing {
         string id_meter;
         uint ts_delivery;
-        uint energy_balancing_positive;
-        uint energy_balancing_negative;
+        int energy_balancing_positive;
+        int energy_balancing_negative;
     }
     struct price_settlement{
         uint ts_delivery;
-        uint price_energy_balancing_positive;
-        uint price_energy_balancing_negative;
-        uint price_energy_levies_positive;
-        uint price_energy_levies_negative;
+        int price_energy_balancing_positive;
+        int price_energy_balancing_negative;
+        int price_energy_levies_positive;
+        int price_energy_levies_negative;
     }
     struct log_transaction{
         string id_user;
         uint ts_delivery;
-        uint price_energy_market;
+        int price_energy_market;
         string type_transaction;
         int qty_energy;         // some values can be negative too
         int delta_balance;
@@ -144,14 +144,14 @@ contract LemLib {
         return timestep_size;
     }
     //return true if a list of user infos has at least one user with id_user as the argument given in input
-    function check_user_id_in_user_infos(string memory id_user, user_info[] memory user_infos) public pure returns(bool) {
+    function check_user_id_in_user_infos(string memory id_user, user[] memory user_infos) public pure returns(bool) {
         for(uint i = 0; i < user_infos.length; i++) {
             if(compareStrings(user_infos[i].id_user, id_user)) return true;
         }
         return false;
     }
     //same as check_user_id_in_user_infos. it also checks if ts_delivery is between ts_delivery_first and ts_delivery_last of the user
-    function check_user_id_in_user_infos_interval(string memory id_user, uint ts_delivery, user_info[] memory user_infos) public pure returns(bool) {
+    function check_user_id_in_user_infos_interval(string memory id_user, uint ts_delivery, user[] memory user_infos) public pure returns(bool) {
         for(uint i = 0; i < user_infos.length; i++) {
             if(compareStrings(user_infos[i].id_user, id_user)) {
                 return (user_infos[i].ts_delivery_first <= ts_delivery && ts_delivery <= user_infos[i].ts_delivery_last);
@@ -211,8 +211,8 @@ contract LemLib {
         return copy;
     }
     //copies an array of user_info and its values from index start to index end
-    function copyArray_UserInfo(user_info[] memory arr, uint start, uint end) public pure returns(user_info[] memory) {
-        user_info[] memory copy = new user_info[](arr.length);
+    function copyArray_UserInfo(user[] memory arr, uint start, uint end) public pure returns(user[] memory) {
+        user[] memory copy = new user[](arr.length);
         for(uint i = start; i <= end; i++) {
             copy[i] = arr[i];
         }
@@ -392,53 +392,53 @@ contract LemLib {
     }
     //function to get the market results inside a ts_delivery, it first copies the results, then deletes the rest of
     //the entries not used, this is done because memory arrays cannot be dynamic and we dont need a storage array for this
-    function market_results_inside_ts_delivery(market_result_total[] memory results, uint ts_delivery) public pure returns(market_result_total[] memory){
-        uint length_results=0;
-        for(uint i=0; i<results.length; i++){
-            if(results[i].ts_delivery==ts_delivery){
-                length_results++;
+    function market_results_ts_delivery(market_result_total[] memory market_results, uint ts_delivery) public pure returns(market_result_total[] memory){
+        uint market_results_ts_d_filtered = 0;
+        for(uint i=0; i<market_results.length; i++){
+            if(market_results[i].ts_delivery == ts_delivery){
+                market_results_ts_d_filtered++;
             }
         }
-        if(length_results==0){
-            market_result_total[] memory sample=new market_result_total[](1);
-            sample[0].ts_delivery=uint(-1);
+        if(market_results_ts_d_filtered == 0){
+            market_result_total[] memory sample = new market_result_total[](1);
+            sample[0].ts_delivery = uint(-1);
             return sample;
         }
-        market_result_total[] memory filtered_results= new market_result_total[](length_results);
-        uint index=0;
-        for(uint i=0; i<results.length; i++){
-            if(results[i].ts_delivery==ts_delivery){
-                filtered_results[index]=results[i];
+        market_result_total[] memory filtered_market_results = new market_result_total[](market_results_ts_d_filtered);
+        uint index = 0;
+        for(uint i=0; i<market_results.length; i++){
+            if(market_results[i].ts_delivery == ts_delivery){
+                filtered_market_results[index] = market_results[i];
                 index++;
             }
         }
-        return filtered_results;
+        return filtered_market_results;
     }
     //FUNCTIONS FOR DELTA METERS
     //function to get the meter readings inside a ts_delivery, memory optimized. It needs to first read the amount of
     // meters that there are to create the array, since memory arrays are not allowed to be dynamically changed once
     // initialized
-    function meters_delta_inside_ts_delivery(meter_reading_delta[] memory meters, uint ts_delivery) public pure returns(meter_reading_delta[] memory){
-        uint length_meters=0;
-        for(uint i=0; i<meters.length; i++){
-            if(meters[i].ts_delivery==ts_delivery){
-                length_meters++;
+    function meter_readings_delta_ts_delivery(meter_reading_delta[] memory meter_readings, uint ts_delivery) public pure returns(meter_reading_delta[] memory){
+        uint meter_readings_delta_ts_delivery_length = 0;
+        for(uint i=0; i< meter_readings.length; i++){
+            if(meter_readings[i].ts_delivery == ts_delivery){
+                meter_readings_delta_ts_delivery_length++;
             }
         }
-        if(length_meters==0){
-            meter_reading_delta[] memory sample= new meter_reading_delta[](1);
+        if(meter_readings_delta_ts_delivery_length == 0){
+            meter_reading_delta[] memory sample = new meter_reading_delta[](1);
             sample[0].ts_delivery=uint(-1);
             return sample;
         }
-        meter_reading_delta[] memory filtered_results= new meter_reading_delta[](length_meters);
-        uint index=0;
-        for(uint i=0; i<meters.length; i++){
-            if(meters[i].ts_delivery==ts_delivery){
-                filtered_results[index]=meters[i];
+        meter_reading_delta[] memory meter_readings_delta_ts_d_filtered = new meter_reading_delta[](meter_readings_delta_ts_delivery_length);
+        uint index = 0;
+        for(uint i=0; i< meter_readings.length; i++){
+            if(meter_readings[i].ts_delivery == ts_delivery){
+                meter_readings_delta_ts_d_filtered[index] = meter_readings[i];
                 index++;
             }
         }
-        return filtered_results;
+        return meter_readings_delta_ts_d_filtered;
     }
     function ts_delivery_to_index(uint ts_delivery) public pure returns(uint){
         uint monday_00 = 1626040800;    //reference unix time from Monday 12th July 2021 at 00:00 at Berlin timezone

@@ -7,16 +7,13 @@ import "./Sorting.sol";
 
 contract ClearingExAnte {
 
-	/* this is an event which receives one string as argument.
-	every event produces a log at the end of a transaction. this event can be used for debugging(not live).
-	*/
-	event logString(string arg);
-	Lb.LemLib.offer_bid[] offers;//list of total offers stored. they don't get deleted unless one reset the contract
-	Lb.LemLib.offer_bid[] bids;//list of total bids stored. they don't get deleted unless one reset the contract
-	Lb.LemLib.user_info[] user_infos;
-	Lb.LemLib.id_meter[] id_meters;
-	mapping(string=>string) id_meter2id_user;
-	// bool mapping_created=false;
+	event logString(string arg); // produces a log at the end of a transaction and can be used for debugging (not live)
+	Lb.LemLib.offer_bid[] offers; //list of total offers stored. they don't get deleted unless one reset the contract
+	Lb.LemLib.offer_bid[] bids; //list of total bids stored. they don't get deleted unless one reset the contract
+	Lb.LemLib.user[] user_infos;
+	Lb.LemLib.meter[] meter_infos;
+	mapping(string => string) map_to_user_id;
+	mapping(string => string) map_to_main_meter_id;
 	/*list of temporary offers stored.
 	They are relative to each market clearing and for every market clearing they might be deleted.
 	Now the deletion is performed via Web3.py in python before pushing new ones.*/
@@ -32,7 +29,6 @@ contract ClearingExAnte {
 	Lb.LemLib lib= new Lb.LemLib();//instance of the contract LemLib(general library with useful functionalities)
 	Sorting srt = new Sorting();//instance of the contract Sorting(useful sorting functionalities)
 
-	//mapping(uint => address) ts_to_address;
 	//uint horizon = 7* 24*60*60 /lib.timestep_size; 	//we use a one week horizon with 15 minutes timesteps
 	//uint[horizon][] public energy_balances;
 
@@ -53,7 +49,7 @@ contract ClearingExAnte {
 	}
 	function clearPermanentData() public {//function that deletes objects from the contract storage
 		delete ClearingExAnte.user_infos;
-		delete ClearingExAnte.id_meters;
+		delete ClearingExAnte.meter_infos;
 		delete ClearingExAnte.offers;
 		delete ClearingExAnte.bids;
 	}
@@ -99,51 +95,76 @@ contract ClearingExAnte {
 	   // 		delete ClearingExAnte.user_infos[ClearingExAnte.user_infos.length - 1];
 	    		ClearingExAnte.user_infos.pop();
 	    	}
-	    	if(ClearingExAnte.id_meters.length > 0){
+	    	if(ClearingExAnte.meter_infos.length > 0){
 	   // 		delete ClearingExAnte.id_meters[ClearingExAnte.id_meters.length - 1];
-	    		ClearingExAnte.id_meters.pop();
+	    		ClearingExAnte.meter_infos.pop();
 	    	}
 	    }
 	}
+
 	//add an offer or bid to the list of temporary and/or permanent offers in the storage of the contract
 	function pushOfferOrBid(Lb.LemLib.offer_bid memory ob, bool isOffer, bool temp, bool permanent) public {
 	    if(isOffer) pushOffer(ob, temp, permanent);
 		else pushBid(ob, temp, permanent);
 	}
+
 	//add an offer to the lists of temporary and/or permanent offers in the storage of the contract
 	function pushOffer(Lb.LemLib.offer_bid memory off, bool temp, bool permanent) private {
 		if(temp) ClearingExAnte.temp_offers.push(off);
 		if(permanent) ClearingExAnte.offers.push(off);
 	}
+
 	//add an bid to the lists of temporary and/or permanent bids in the storage of the contract
 	function pushBid(Lb.LemLib.offer_bid memory bid, bool temp, bool permanent) private {
 		if(temp) ClearingExAnte.temp_bids.push(bid);
 		if(permanent) ClearingExAnte.bids.push(bid);
 	}
+
 	//add a user info to the lists of user_infos in the storage of the contract
-	function push_user_info(Lb.LemLib.user_info memory user_info) public {
+	function push_user_info(Lb.LemLib.user memory user_info) public {
 	    ClearingExAnte.user_infos.push(user_info);
-
+		map_to_user_id[user_info.id_market_agent] = user_info.id_user;
+		map_to_user_id[user_info.id_user] = user_info.id_user;
 	}
+
 	//add a id_meter to the lists of id_meters in the storage of the contract
-	function push_id_meters(Lb.LemLib.id_meter memory id_meter) public {
-		ClearingExAnte.id_meters.push(id_meter);
+	function push_meter_info(Lb.LemLib.meter memory meter_info, bool main_meter) public {
+		ClearingExAnte.meter_infos.push(meter_info);
+		map_to_user_id[meter_info.id_meter] = meter_info.id_user;
+		map_to_user_id[meter_info.id_user] = meter_info.id_user;
+		if(main_meter) {
+			map_to_main_meter_id[meter_info.id_meter] = meter_info.id_meter;
+			map_to_main_meter_id[meter_info.id_user] = meter_info.id_meter;
+		}
 	}
-
 
 	//gets the list of user_infos in the storage of the contract
-	function get_user_infos() public view returns (Lb.LemLib.user_info[] memory) {
+	function get_user_infos() public view returns (Lb.LemLib.user[] memory) {
 		return ClearingExAnte.user_infos;
 	}
+
 	//gets the list of id_meters in the storage of the contract
-	function get_id_meters() public view returns (Lb.LemLib.id_meter[] memory) {
-		return ClearingExAnte.id_meters;
+	function get_info_meters() public view returns (Lb.LemLib.meter[] memory) {
+		return ClearingExAnte.meter_infos;
 	}
+
+	function get_main_meter_id(string memory id) public view returns (string memory main_meter_id) {
+		return map_to_main_meter_id[id];
+	}
+
+	function map_id_to_main_meter_id(string memory id, string memory main_meter_id) public {
+		map_to_main_meter_id[id] = main_meter_id;
+	}
+
+	function get_user_id(string memory id) public view returns(string memory){
+		return map_to_user_id[id];
+	}
+
 	//function to delete a single user from the chain, for that, we push the last one into
 	// that position and delete the last (decreasing the length auto deletes the last element at a cheaper gas cost), to not leave any empty spot
 	// the function can additionally delete all the meters pointing to that user
-	function delete_user(Lb.LemLib.user_info memory user, bool del_meters) public {
-		for(uint i=0; i<ClearingExAnte.user_infos.length; i++){
+	function delete_user(Lb.LemLib.user memory user, bool del_meters) public {
+		for(uint i = 0; i < ClearingExAnte.user_infos.length; i++){
 			if(lib.compareStrings(ClearingExAnte.user_infos[i].id_user, user.id_user)){
 				// ClearingExAnte.user_infos[i]=ClearingExAnte.user_infos[ClearingExAnte.user_infos.length-1];
 				ClearingExAnte.user_infos.pop();
@@ -152,20 +173,21 @@ contract ClearingExAnte {
 		}
 		if (del_meters){
 			// same as delete_meter, but in this case we do not break, as there may be many meters for one user
-			for(uint j=0; j<ClearingExAnte.id_meters.length; j++){
-				if(lib.compareStrings(ClearingExAnte.id_meters[j].id_user, user.id_user)){
+			for(uint j=0; j<ClearingExAnte.meter_infos.length; j++){
+				if(lib.compareStrings(ClearingExAnte.meter_infos[j].id_user, user.id_user)){
 				// 	ClearingExAnte.id_meters[j]=ClearingExAnte.id_meters[ClearingExAnte.id_meters.length-1];
-					ClearingExAnte.id_meters.pop();
+					ClearingExAnte.meter_infos.pop();
 				}
 			}
 		}
 	}
+
 	//function to delete a single meter from the chain
-	function delete_meter(Lb.LemLib.id_meter memory meter) public{
-		for(uint i=0; i<ClearingExAnte.id_meters.length; i++){
-			if(lib.compareStrings(ClearingExAnte.id_meters[i].id_meter, meter.id_meter)){
+	function delete_meter(Lb.LemLib.meter memory meter) public{
+		for(uint i=0; i<ClearingExAnte.meter_infos.length; i++){
+			if(lib.compareStrings(ClearingExAnte.meter_infos[i].id_meter, meter.id_meter)){
 				// ClearingExAnte.id_meters[i]=ClearingExAnte.id_meters[ClearingExAnte.id_meters.length-1];
-				ClearingExAnte.id_meters.pop();
+				ClearingExAnte.meter_infos.pop();
 				break;
 			}
 		}
@@ -176,31 +198,22 @@ contract ClearingExAnte {
 	    if(temp) return ClearingExAnte.temp_offers;
 		else return ClearingExAnte.offers;
 	}
+
 	//gets the list of temporary or permanent bids
     function getBids(bool temp) public view returns(Lb.LemLib.offer_bid[] memory) {
 		if(temp) return ClearingExAnte.temp_bids;
 		else return ClearingExAnte.bids;
     }
+
     //gets the total market results
 	function get_market_results_total() public view returns (Lb.LemLib.market_result_total[] memory) {
 	    return ClearingExAnte.market_results_total;
 	}
+
 	//gets the temporary market results
 	function getTempMarketResults() public view returns (Lb.LemLib.market_result[] memory) {
 	    return ClearingExAnte.temp_market_results;
 	}
-	function create_meter2user() private{
-		// if(!mapping_created){
-			for(uint i=0; i<id_meters.length; i++){
-				id_meter2id_user[id_meters[i].id_meter]=id_meters[i].id_user;
-			}
-			// mapping_created=true;
-		//}
-	}
-	function get_meter2user(string memory id_meter) public view returns(string memory){
-		return id_meter2id_user[id_meter];
-	}
-
 
 	//returns a filtering of the temporary positions(offer/bids). The ones having the ts_delivery == t_clearing_current and t_clearing_current in the limits of the ts_delivery first and last of the user
 	function filteredOffersBids_ts_delivery_user(uint t_clearing_current) public view returns (Lb.LemLib.offer_bid[] memory, Lb.LemLib.offer_bid[] memory){
@@ -240,6 +253,7 @@ contract ClearingExAnte {
 		}
 	    return (filtered_offers, filtered_bids);
 	}
+
 	//returns a filtering of the temporary positions(offer/bids). The ones having the ts_delivery == t_clearing_current and quantity of energy > 0
 	function getFilteredOffersBids_memory(uint t_clearing_current) public view returns (Lb.LemLib.offer_bid[] memory, Lb.LemLib.offer_bid[] memory){
 	    uint len = 0;
@@ -278,6 +292,7 @@ contract ClearingExAnte {
 		}
 	    return (filtered_offers, filtered_bids);
 	}
+
 	//same as getFilteredOffersBids_memory(). takes more gas than that though
 	function getFilteredOffersBids_memory_two(uint t_clearing_current) public view returns (Lb.LemLib.offer_bid[] memory, Lb.LemLib.offer_bid[] memory){
 		Lb.LemLib.offer_bid[] memory filtered_offers = new Lb.LemLib.offer_bid[](ClearingExAnte.temp_offers.length);
@@ -301,6 +316,7 @@ contract ClearingExAnte {
 		filtered_bids = lib.cropOfferBids(filtered_bids, 0, j-1);
 	    return (filtered_offers, filtered_bids);
 	}
+
 	//same as getFilteredOffersBids_memory(). it also sorts the position by price
 	function filter_sort_OffersBids_memory(uint t_clearing_current) public view returns(Lb.LemLib.offer_bid[] memory, Lb.LemLib.offer_bid[] memory) {
 	    Lb.LemLib.offer_bid[] memory filtered_offers;
@@ -310,6 +326,7 @@ contract ClearingExAnte {
 	    filtered_bids = srt.quickSortOffersBidsPrice(filtered_bids, false);
 	    return (filtered_offers, filtered_bids);
 	}
+
 	//similar to filter_sort_OffersBids_memory(). It also sorts by quality(and optional quantity) and aggregate identical positions
 	function filter_sort_aggregate_OffersBids_memory(uint t_clearing_current, bool simulation_test) public view returns(Lb.LemLib.offer_bid[] memory, Lb.LemLib.offer_bid[] memory) {
 	    Lb.LemLib.offer_bid[] memory filtered_offers;
@@ -323,6 +340,7 @@ contract ClearingExAnte {
 	    filtered_bids = srt.insertionSortOffersBidsPrice_Quality(filtered_bids, false, false, simulation_test, false);
 	    return (filtered_offers, filtered_bids);
 	}
+
 	//add one supplier bid and one supplier offer to the lists of offers and bids given in input. then it returns them.
 	function add_supplier_bids_memory(uint t_clearing_current, Lb.LemLib.offer_bid[] memory filtered_offers, Lb.LemLib.offer_bid[] memory filtered_bids) public view returns(Lb.LemLib.offer_bid[] memory, Lb.LemLib.offer_bid[] memory) {
 	    Lb.LemLib.offer_bid memory supOfferBid = Lb.LemLib.offer_bid({id_user:p.getIdSupplier(), qty_energy: p.getQtyOfferSupplier(), price_energy: p.getPriceOfferSupplier(), quality_energy:0, type_position:"0", premium_preference_quality:p.getPremium_preference_quality(), number_position:0, status_position:0, t_submission:t_clearing_current, ts_delivery:t_clearing_current});
@@ -342,6 +360,7 @@ contract ClearingExAnte {
 		}
 	    return (filtered_offers_sup, filtered_bids_sup);
 	}
+
 	//single clearing, relative for a specific t_clearing_current. At the end it can push the results temp_market_results and temp_market_result_total
 	function single_clearing(uint t_clearing_current, bool add_supplier_bids, bool uniform_pricing, bool discriminative_pricing, uint t_cleared, bool writeTempMarketResult, bool writeFinalMarketResult, bool verbose, bool shuffle, bool simulation_test) public {
 		if(writeTempMarketResult) delete ClearingExAnte.temp_market_results;
@@ -430,6 +449,7 @@ contract ClearingExAnte {
             }
         }
 	}
+
 	//same as single_clearing(). It performs the operations in memory and return the temp market results(i.e. for this single clearing)
 	function single_clearing_memory(uint t_clearing_current, bool add_supplier_bids, bool uniform_pricing, bool discriminative_pricing, bool shuffle, bool simulation_test) public view returns(Lb.LemLib.market_result[] memory){
 		Lb.LemLib.offer_bid[] memory filtered_offers;
@@ -462,6 +482,7 @@ contract ClearingExAnte {
         }
         return new Lb.LemLib.market_result[](0);
 	}
+
 	//it performs the merge between a list of offers, and a list of bids. it produces an object of the type market_result.
 	function merge_offers_bids_memory(Lb.LemLib.offer_bid[] memory filtered_offers, Lb.LemLib.offer_bid[] memory filtered_bids) public view returns(Lb.LemLib.market_result[] memory) {
 	    //Insert cumulated bid energy into tables
@@ -562,6 +583,7 @@ contract ClearingExAnte {
 
 	    return temp_market_results_final;
 	}
+
 	//it calculates the share of source of energy, for every single match offer/bid
 	function add_quality_shares(Lb.LemLib.market_result[] memory temp_market_results_m) public pure returns(Lb.LemLib.market_result[] memory) {
 		//{0: 'NA', 1: 'local', 2: 'green', 3: 'green_local'}
@@ -591,6 +613,7 @@ contract ClearingExAnte {
     	}
     	return temp_market_results_m;
 	}
+
 	//calculates the uniform and discriminative pricing of market_result given in input
 	function calc_market_clearing_prices(Lb.LemLib.market_result[] memory temp_market_results_m, bool uniform_pricing, bool discriminative_pricing) public pure returns(Lb.LemLib.market_result[] memory) {
 	    //check whether merged bids and offers are empty
@@ -612,9 +635,10 @@ contract ClearingExAnte {
 	    }
 	    return temp_market_results_m;
 	}
+
 	//update the balances of the user infos in the storage, given the total market results on storage as well. It returns the user infos with the updated balances
-	function updateBalances_call() public view returns(Lb.LemLib.user_info[] memory) {
-		Lb.LemLib.user_info[] memory temp_balance_update = lib.copyArray_UserInfo(ClearingExAnte.user_infos, 0, ClearingExAnte.user_infos.length - 1);
+	function updateBalances_call() public view returns(Lb.LemLib.user[] memory) {
+		Lb.LemLib.user[] memory temp_balance_update = lib.copyArray_UserInfo(ClearingExAnte.user_infos, 0, ClearingExAnte.user_infos.length - 1);
 		for(uint i = 0; i < ClearingExAnte.market_results_total.length; i++) {
 			int delta = int(ClearingExAnte.market_results_total[i].price_energy_market_uniform * ClearingExAnte.market_results_total[i].qty_energy_traded);//I don't divide by 1000, since there is no float
 			for(uint j = 0; j < temp_balance_update.length; j++) {
@@ -633,16 +657,17 @@ contract ClearingExAnte {
 		}
 		return temp_balance_update;
 	}
+
 	//update the balances of the user infos in the storage, given the total market results on storage as well. It writes the results on storage
 	function update_balances_after_clearing_ex_ante() public {
 		for(uint i = 0; i < ClearingExAnte.market_results_total.length; i++) {
 			int delta = int(ClearingExAnte.market_results_total[i].price_energy_market_uniform * ClearingExAnte.market_results_total[i].qty_energy_traded);//I don't divide by 1000, since there is no float
 			for(uint j = 0; j < ClearingExAnte.user_infos.length; j++) {
 				if(delta < 0) delta = (-1) * delta;
-				string memory id_user =ClearingExAnte.user_infos[j].id_user;
-				if(lib.compareStrings(ClearingExAnte.market_results_total[i].id_user_offer, id_user) || lib.compareStrings(ClearingExAnte.market_results_total[i].id_user_bid, id_user)) {
-					if(!(lib.compareStrings(ClearingExAnte.market_results_total[i].id_user_offer,ClearingExAnte.market_results_total[i].id_user_bid))) {
-						if(lib.compareStrings(ClearingExAnte.market_results_total[i].id_user_bid, id_user)) {
+				string memory id_user = ClearingExAnte.user_infos[j].id_user;
+				if(lib.compareStrings(map_to_user_id[ClearingExAnte.market_results_total[i].id_user_offer], id_user) || lib.compareStrings(map_to_user_id[ClearingExAnte.market_results_total[i].id_user_bid], id_user)) {
+					if(!(lib.compareStrings(map_to_user_id[ClearingExAnte.market_results_total[i].id_user_offer], map_to_user_id[ClearingExAnte.market_results_total[i].id_user_bid]))) {
+						if(lib.compareStrings(map_to_user_id[ClearingExAnte.market_results_total[i].id_user_bid], id_user)) {
 							delta = (-1) * delta;
 						}
 						ClearingExAnte.user_infos[j].balance_account = ClearingExAnte.user_infos[j].balance_account + delta;
@@ -652,16 +677,18 @@ contract ClearingExAnte {
 			}
 		}
 	}
+
 	//similar to the functions above, but it takes the parameters as input to update, only for 1 single user
 	function update_user_balances(Lb.LemLib.log_transaction memory transaction_log) public{
-		for(uint i=0; i<user_infos.length; i++){
-			if(lib.compareStrings(user_infos[i].id_user, transaction_log.id_user)){
-				user_infos[i].balance_account+=transaction_log.delta_balance;
-				user_infos[i].t_update_balance=transaction_log.t_update_balance;
+		for(uint i = 0; i < user_infos.length; i++){
+			if(lib.compareStrings(user_infos[i].id_user, map_to_user_id[transaction_log.id_user])){
+				user_infos[i].balance_account += transaction_log.delta_balance;
+				user_infos[i].t_update_balance = transaction_log.t_update_balance;
 				break;
 			}
 		}
 	}
+
 	//it performs the full market clearing. The results are then stored in the variable market_results_total
 	function market_clearing(uint n_clearings, uint t_clearing_first, bool supplier_bids, bool uniform_pricing, bool discriminative_pricing, uint clearing_interval, uint t_clearing_start, bool shuffle, bool verbose, bool update_balances, bool simulation_test) public {
 	    if(verbose) {
@@ -681,9 +708,7 @@ contract ClearingExAnte {
         	//performing a single clearing
         	single_clearing(t_clearing_current, add_supplier_bids, uniform_pricing, discriminative_pricing, t_clearing_start, false, true, verbose, shuffle, simulation_test);
     	}
-    	//updating balances on storage
     	if(update_balances) update_balances_after_clearing_ex_ante();
-		create_meter2user();
     	if(verbose) {
     		string_to_log = lib.concatenateStrings(string_to_log, "Updated balances of users");
     		emit logString(string_to_log);

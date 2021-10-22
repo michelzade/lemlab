@@ -44,15 +44,14 @@ def init_random_data(db_obj, bc_obj_market, config, bc_obj_settlement):
     bc_obj_market.clear_temp_data()
     bc_obj_market.clear_permanent_data()
     bc_obj_settlement.clear_data()
-
     # Create list of random user ids and meter ids
     ids_users_random = create_user_ids(num=config['prosumer']['general_number_of'])
     ids_meter_random = create_user_ids(num=config['prosumer']['general_number_of'])
     ids_market_agents = create_user_ids(num=config['prosumer']['general_number_of'])
 
     tx_hash = None
-    # Register meters and users on database
     for z in range(len(ids_users_random)):
+        # Register users on bc and db
         cols, types = db_obj.get_table_columns(db_obj.db_param.NAME_TABLE_INFO_USER, dtype=True)
         col_data = [ids_users_random[z], 1000, 0, 10000, 100, 'green', 10, 'zi', 0, ids_market_agents[z], 0, 2147483648]
         if any([type(data) != typ for data, typ in zip(col_data, types)]):
@@ -60,11 +59,10 @@ def init_random_data(db_obj, bc_obj_market, config, bc_obj_settlement):
         df_insert = pd.DataFrame(
             data=[col_data],
             columns=cols)
-
-        # Register users on bc and db
         db_obj.register_user(df_in=df_insert)
         bc_obj_market.register_user(df_user=df_insert)
 
+        # Register meters on bc and db
         cols, types = db_obj.get_table_columns(db_obj.db_param.NAME_TABLE_INFO_METER, dtype=True)
         col_data = [ids_meter_random[z], ids_users_random[z], "0", "virtual grid meter", '0' * 10, 'green', 0,
                     2147483648,
@@ -74,17 +72,16 @@ def init_random_data(db_obj, bc_obj_market, config, bc_obj_settlement):
         df_insert = pd.DataFrame(
             data=[col_data],
             columns=cols)
-
-        # Register meters on db and bc
         db_obj.register_meter(df_in=df_insert)
         tx_hash = bc_obj_market.register_meter(df_insert)
 
+    # wait until last meter has been registered
     bc_obj_market.wait_for_transact(tx_hash)
 
     # Compute random market positions
     positions = create_random_positions(db_obj=db_obj,
                                         config=config,
-                                        ids_user=ids_users_random,
+                                        ids_user=ids_meter_random,
                                         n_positions=100,
                                         verbose=False)
     # Post positions on db
@@ -346,6 +343,7 @@ def _convert_qualities_to_int(db_obj, positions, dict_types):
 
 
 if __name__ == '__main__':
+    random.seed(0)
     # setup_test_general(generate_random_test_data=True)
     # setup_clearing_ex_ante_test(generate_random_test_data=True)
     setup_settlement_test(generate_random_test_data=True)

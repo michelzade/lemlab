@@ -111,7 +111,7 @@ class BlockchainConnection:
     # Market participants only
 
     def get_info_meter(self, meter_id=""):
-        meter_info_list = self.functions.get_id_meters().call()
+        meter_info_list = self.functions.get_info_meters().call()
         meter_info_df = pd.DataFrame(meter_info_list, columns=bc_param.info_meter_column_names)
         if meter_id != "":
             meter_info_df = meter_info_df[meter_info_df["id_meter"] == meter_id]
@@ -157,7 +157,7 @@ class BlockchainConnection:
         -------
 
         """
-        meter_info_list = self.functions.get_id_meters().call()
+        meter_info_list = self.functions.get_info_meters().call()
         meter_info_df = pd.DataFrame(meter_info_list, columns=bc_param.info_meter_column_names)
         if ts_delivery_active is not None:
             final_meter_list = []
@@ -175,7 +175,8 @@ class BlockchainConnection:
     # Admins only
 
     def register_meter(self, df_meter):
-        tx_hash = self.functions.push_id_meters(tuple(df_meter.values.tolist()[0])).transact({'from': self.coinbase})
+        tx_hash = self.functions.push_meter_info(tuple(df_meter.values.tolist()[0]),
+                                                 True).transact({'from': self.coinbase})
         return tx_hash
 
     def delete_meter(self, df_meter):
@@ -357,7 +358,7 @@ class BlockchainConnection:
         while n_clearings_done < n_clearings:
             if n_clearings - n_clearings_done <= n_clearings_current:  # last step
                 n_clearings_current = n_clearings - n_clearings_done
-                update_balances = False
+                update_balances = True
             try:
                 # Performing the market clearing for a number of clearings
                 tx_hash = self.functions.market_clearing(int(n_clearings_current),
@@ -382,8 +383,8 @@ class BlockchainConnection:
                 n_clearings_current = int(n_clearings_current * 0.75)
                 update_balances = False
 
-        # Update user balances after clearing
-        self.update_balances_after_clearing_ex_ante()
+        # # Update user balances after clearing
+        # self.update_balances_after_clearing_ex_ante()
 
     # clears temporal data (offers, bids, market results)
     def clear_temp_data(self):
@@ -416,7 +417,7 @@ class BlockchainConnection:
             while len(self.get_open_positions(only_offers=True, temp=False, return_list=True)) > 0 or \
                     len(self.get_open_positions(only_offers=False, temp=False, return_list=True)) > 0 or \
                     len(self.functions.get_user_infos().call()) or \
-                    len(self.functions.get_id_meters().call()):
+                    len(self.functions.get_info_meters().call()):
                 try:
                     tx_hash = self.functions.clearPermanentData_gas_limit(limit_to_remove).transact(
                         {'from': self.coinbase})
