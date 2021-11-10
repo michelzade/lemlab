@@ -1,6 +1,6 @@
 import pytest
-import pandas as pd
 import test_utils
+import pandas as pd
 
 
 config = None

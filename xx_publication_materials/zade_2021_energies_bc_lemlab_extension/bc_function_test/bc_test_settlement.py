@@ -12,7 +12,7 @@ bc_obj_settlement = None
 def setup():
     global config, db_obj, bc_obj_clearing_ex_ante, bc_obj_settlement
     config, db_obj, bc_obj_clearing_ex_ante, bc_obj_settlement = \
-        test_utils.setup_settlement_test(generate_random_test_data=True)
+        test_utils.settlement_test(generate_random_test_data=True)
 
 
 def test_clearing_results_ex_ante():

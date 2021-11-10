@@ -164,7 +164,7 @@ contract LemLib {
         return (keccak256(abi.encode((a))) == keccak256(abi.encode((b))));
     }
     //converts a string to bytes32
-    function stringToBytes32(string memory source) public pure returns (bytes32 result) {
+    function string_to_bytes_32(string memory source) public pure returns (bytes32 result) {
         bytes memory tempEmptyStringTest = bytes(source);
         if (tempEmptyStringTest.length == 0) {
             return 0x0;
@@ -203,7 +203,7 @@ contract LemLib {
         }
     }
     //copies an array of uint and its values from index start to index end
-    function copyArray(uint[] memory arr, uint start, uint end) public pure returns(uint[] memory) {
+    function copy_array(uint[] memory arr, uint start, uint end) public pure returns(uint[] memory) {
         uint[] memory copy = new uint[](arr.length);
         for(uint i = start; i <= end; i++) {
             copy[i] = arr[i];
@@ -211,7 +211,7 @@ contract LemLib {
         return copy;
     }
     //copies an array of user_info and its values from index start to index end
-    function copyArray_UserInfo(user[] memory arr, uint start, uint end) public pure returns(user[] memory) {
+    function copy_array_user_info(user[] memory arr, uint start, uint end) public pure returns(user[] memory) {
         user[] memory copy = new user[](arr.length);
         for(uint i = start; i <= end; i++) {
             copy[i] = arr[i];
@@ -231,7 +231,7 @@ contract LemLib {
         return new_arr;
     }
     //sums the values of a uint array
-    function sumArrIndices(uint start, uint end, uint[] memory arr) public pure returns (uint) {
+    function sum_arr_indices(uint start, uint end, uint[] memory arr) public pure returns (uint) {
         uint s;
 
         for(uint i = start;i <= end; i ++){
@@ -243,16 +243,16 @@ contract LemLib {
     takes a list of offer_bid as an input.
     starting from position 0, to the end of the list, the energy cumulated array is calculated as a sum of the quantity of energy and then returned
     */
-    function getEnergyCumulated(offer_bid[] memory offers_bids) public pure returns (uint[] memory) {
+    function get_energy_cumulated(offer_bid[] memory offers_bids) public pure returns (uint[] memory) {
         uint[] memory energy_cumulated = new uint[](offers_bids.length);
 
         for (uint i = 0; i < energy_cumulated.length; i++) {
-            energy_cumulated[i] = sumArrIndices(0, i, arr_of_quantities_offerbids(offers_bids));
+            energy_cumulated[i] = sum_arr_indices(0, i, arr_of_quantities_offerbids(offers_bids));
         }
         return energy_cumulated;
     }
     //converts uint to string
-    function uintToString(uint v) public pure returns (string memory) {
+    function uint_to_string(uint v) public pure returns (string memory) {
         if(v==0){
             return "0";
         }
@@ -271,11 +271,11 @@ contract LemLib {
         return string(s);
     }
     //merges two strings into one string
-    function concatenateStrings(string memory a, string memory b) public pure returns (string memory) {
+    function concatenate_strings(string memory a, string memory b) public pure returns (string memory) {
         return string(abi.encodePacked(a, b));
     }
     //converts a uint to string, and then appends it to another string, given in input
-    function appendUintToString(string memory inStr, uint v) public pure returns (string memory) {
+    function append_uint_to_string(string memory inStr, uint v) public pure returns (string memory) {
         uint maxlength = 100;
         bytes memory reversed = new bytes(maxlength);
         uint i = 0;
@@ -296,7 +296,7 @@ contract LemLib {
         return string(s);
     }
     //converts a string to uint
-    function stringToUint(string memory s) public pure returns (uint result) {
+    function string_to_uint(string memory s) public pure returns (uint result) {
         bytes memory b = bytes(s);
         uint i;
         result = 0;
@@ -311,7 +311,7 @@ contract LemLib {
     For every position of the new array, every element of the new array is equal to
     the difference between the element at the next position in the input array, and the element at the position in the input array
     */
-    function computeDifferences(uint[] memory arr, uint start, uint end) public pure returns(uint[] memory) {
+    function compute_differences(uint[] memory arr, uint start, uint end) public pure returns(uint[] memory) {
         uint[] memory differences = new uint[](end - start);
 
         for(uint i = start; i < end;i++) {
@@ -346,7 +346,7 @@ contract LemLib {
         return arr_qualities;
     }
     //concatenates two arrays of offer_bid into a new array and return it
-    function concatenateOffersBids(offer_bid[] memory one, offer_bid[] memory two) public pure returns (offer_bid[] memory) {
+    function concatenate_bids(offer_bid[] memory one, offer_bid[] memory two) public pure returns (offer_bid[] memory) {
         offer_bid[] memory concat = new offer_bid[](one.length + two.length);
         for(uint i = 0; i < one.length; i++) {
             concat[i] = one[i];
@@ -373,7 +373,7 @@ contract LemLib {
         return arr_prices;
     }
     //check if an array of offer_bid is sorted
-    function checkSortedTsDelivery(offer_bid[] memory offerbid) public pure returns(bool) {
+    function check_sorted_ts_delivery(offer_bid[] memory offerbid) public pure returns(bool) {
         for(uint i = 0; i < offerbid.length-1; i++) {
             if(offerbid[i].ts_delivery>offerbid[i+1].ts_delivery) {
                 return false;
@@ -455,7 +455,7 @@ contract LemLib {
     }
     // MATH UTILITY FUNCTIONS
     //returns the max element of an array
-    function maxArray(uint[] memory arr) public pure returns(uint) {
+    function max_array(uint[] memory arr) public pure returns(uint) {
         uint highest = 0;
             for(uint i = 0; i < arr.length; i++){
                 if(arr[i] > highest) {
@@ -465,7 +465,7 @@ contract LemLib {
         return highest;
     }
     //returns the min element of an array
-    function minArray(uint[] memory arr) public pure returns(uint) {
+    function min_array(uint[] memory arr) public pure returns(uint) {
         uint lowest = arr[0];
         for(uint i = 0; i < arr.length; i++){
             if(arr[i] < lowest) {
@@ -475,7 +475,7 @@ contract LemLib {
         return lowest;
     }
     //reverse the order of a uint array
-    function reverseArray(uint[] memory arr, uint start, uint end) public pure returns(uint[] memory) {
+    function reverse_array(uint[] memory arr, uint start, uint end) public pure returns(uint[] memory) {
         uint[] memory rev = new uint[](arr.length);
         for(uint i = 0;i < arr.length;i++) {
             if(i < start || i > end) rev[i] = arr[i];
@@ -486,7 +486,7 @@ contract LemLib {
         return rev;
     }
     //returns a uint array of length = end - start + 1, with the elements of the given array from start to end(included)
-    function cropArray(uint[] memory data, uint start, uint end) public pure returns(uint[] memory){
+    function crop_array(uint[] memory data, uint start, uint end) public pure returns(uint[] memory){
         uint[] memory cropped = new uint[](end -  start +1);
         uint z = 0;
         for(uint i = start; i <= end; i++) {
@@ -496,7 +496,7 @@ contract LemLib {
         return cropped;
     }
     //returns a offer_bid array of length = end - start + 1, with the elements of the given array from start to end(included)
-    function cropOfferBids(offer_bid[] memory data, uint start, uint end) public pure returns(offer_bid[] memory){
+    function crop_bids(offer_bid[] memory data, uint start, uint end) public pure returns(offer_bid[] memory){
         offer_bid[] memory cropped = new offer_bid[](end -  start +1);
         uint z = 0;
         for(uint i = start; i <= end; i++) {
@@ -508,12 +508,12 @@ contract LemLib {
     /*returns an array of arrays of indices. This has the lenght of the data interval(eg [100,1000] = 901).
     For every position, it saves all the indices of the data where the element is equal to the value in the interval
     */
-    function getCountIndices(uint[] memory count, uint[] memory data, uint[] memory indices, uint start, uint end) public pure returns(uint[][] memory) {
+    function get_count_indices(uint[] memory count, uint[] memory data, uint[] memory indices, uint start, uint end) public pure returns(uint[][] memory) {
         //count size = max-min+1 (of cropped_data)
         //data size = full data.length(no start/end)
         //indices size = full data.length(no start/end)
-        uint[] memory data_cropped = cropArray(data, start, end);
-        uint min = minArray(data_cropped);
+        uint[] memory data_cropped = crop_array(data, start, end);
+        uint min = min_array(data_cropped);
 
         uint z;
         uint[][] memory count_indices = new uint[][](count.length);
@@ -533,7 +533,7 @@ contract LemLib {
     /*
     For insertionsort. given two sorted arrays until a certain position end_pos, and an element at a position new_element_ind, it finds the new position at which the new element should be placed
     */
-    function findPosition_new_element_sort(uint end_pos, uint new_element_ind, uint[] memory arr_first, uint[] memory arr_second, bool ascending_first, bool ascending_second) public pure returns(uint) {
+    function find_position_new_element_sort(uint end_pos, uint new_element_ind, uint[] memory arr_first, uint[] memory arr_second, bool ascending_first, bool ascending_second) public pure returns(uint) {
         uint current_pos = end_pos;
         uint new_element_first = arr_first[new_element_ind];
         uint new_element_second = arr_second[new_element_ind];
@@ -572,7 +572,7 @@ contract LemLib {
         return arr;
     }
     //get the list of indices, given a certain length e.g. len = 4 returns [0,1,2,3]
-    function getIndices(uint len) public pure returns(uint[] memory){
+    function get_indices(uint len) public pure returns(uint[] memory){
         uint[] memory indices = new uint[](len);
         for (uint i = 0; i < indices.length; i++) {
             indices[i] = i;
@@ -580,8 +580,8 @@ contract LemLib {
         return indices;
     }
     //normalize an array. it calculates the min value and subtract it from all the elements of the array
-    function normalizeArr(uint[] memory data) public pure returns(uint[] memory) {
-        uint min = minArray(data);
+    function normalize_array(uint[] memory data) public pure returns(uint[] memory) {
+        uint min = min_array(data);
         for (uint i = 0; i < data.length; i++) {
             data[i] = data[i]-min;
         }
@@ -590,9 +590,9 @@ contract LemLib {
     /*get the count array from a uint array. the count array has length equal to the interval of the data.
     it describes how many times every value in the interval is present in the data array
     */
-    function getCount(uint[] memory data) public pure returns(uint[] memory) {
-        uint max = maxArray(data);
-        uint min = minArray(data);
+    function get_count(uint[] memory data) public pure returns(uint[] memory) {
+        uint max = max_array(data);
+        uint min = min_array(data);
         uint[] memory count = new uint[](max - min + 1);
         for (uint i = 0; i < count.length; i++) {
             count[i] = 0;
@@ -604,7 +604,7 @@ contract LemLib {
         return count;
     }
     //reorders a uint array from start to end index, accoording to new indices
-    function reorderArr(uint[] memory new_indices, uint[] memory arr, uint start, uint end) public pure returns(uint[] memory) {
+    function reorder_array(uint[] memory new_indices, uint[] memory arr, uint start, uint end) public pure returns(uint[] memory) {
         uint[] memory reordered = new uint[](arr.length);
         for (uint i = start; i <= end; i++) {
             reordered[i] = arr[new_indices[i]];
@@ -622,14 +622,14 @@ contract LemLib {
         return arr;
     }
     //shuffles an array of offer_bid
-    function shuffle_OfferBids(offer_bid[] memory offers_bids) public view returns(offer_bid[] memory) {
-        uint[] memory indices_offerbisd = getIndices(offers_bids.length);
-        uint[] memory shuffled_indices = shuffle_arr(indices_offerbisd);
-        offer_bid[] memory shuffled_offers_bids = reorderArr_OfferBid(shuffled_indices, offers_bids);
-        return shuffled_offers_bids;
+    function shuffle_bids(offer_bid[] memory bids) public view returns(offer_bid[] memory) {
+        uint[] memory indices_bids = get_indices(bids.length);
+        uint[] memory shuffled_indices = shuffle_arr(indices_bids);
+        offer_bid[] memory shuffled_bids = reorder_array_bids(shuffled_indices, bids);
+        return shuffled_bids;
     }
     //reorders an array of offer_bid from start to end index, accoording to new indices
-    function reorderArr_OfferBid(uint[] memory new_indices, offer_bid[] memory arr) public pure returns(offer_bid[] memory) {
+    function reorder_array_bids(uint[] memory new_indices, offer_bid[] memory arr) public pure returns(offer_bid[] memory) {
         offer_bid[] memory reordered = new offer_bid[](arr.length);
         for (uint i = 0; i < new_indices.length; i++) {
             reordered[i] = arr[new_indices[i]];

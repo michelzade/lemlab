@@ -487,3 +487,19 @@ db_connections:
                "contract_name": "ClearingExAnte",
                "path_abi": "../truffle/build/contracts"}
 
+
+
+########################################################################################################################
+################################# blockchain performance analysis configuration ########################################
+########################################################################################################################
+
+###########################################################################################
+# bc performance analysis settings
+
+bc_performance_analysis:
+  "n_prosumers": 100                        # number of prosumers on platform
+  "n_positions": {"min": 10,
+                  "max": 100,
+                  "increment": 50}          # range of inserted market positions in analysis
+  "n_ts_delivery": 1                        # number of time of deliveries to be simulated in positions
+  "max_number_positions_ts_d": 99           # in order to omit collisions this number should be at leas.

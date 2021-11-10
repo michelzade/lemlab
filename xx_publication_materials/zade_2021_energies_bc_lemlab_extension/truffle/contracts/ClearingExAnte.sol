@@ -3,7 +3,6 @@ pragma experimental ABIEncoderV2;
 
 import "./Param.sol";
 import "./Sorting.sol";
-//import "@nomiclabs/buidler/console.sol";
 
 contract ClearingExAnte {
 
@@ -47,6 +46,16 @@ contract ClearingExAnte {
 	function clear_permanent_data() public {//function that deletes objects from the contract storage
 		delete ClearingExAnte.user_infos;
 		delete ClearingExAnte.meter_infos;
+		delete ClearingExAnte.offers;
+		delete ClearingExAnte.bids;
+	}
+
+	// Deletes objects from non static market tables
+	function clear_dynamic_market_data_tables() public {
+		delete ClearingExAnte.temp_offers;
+		delete ClearingExAnte.temp_bids;
+		delete ClearingExAnte.temp_market_results;
+		delete ClearingExAnte.market_results_total;
 		delete ClearingExAnte.offers;
 		delete ClearingExAnte.bids;
 	}
@@ -299,7 +308,7 @@ contract ClearingExAnte {
 		    	j++;
 			}
 	    }
-	    filtered_offers = lib.cropOfferBids(filtered_offers, 0, j-1);
+	    filtered_offers = lib.crop_bids(filtered_offers, 0, j-1);
 		Lb.LemLib.offer_bid[] memory filtered_bids = new Lb.LemLib.offer_bid[](ClearingExAnte.temp_bids.length);
 		j = 0;
 
@@ -309,7 +318,7 @@ contract ClearingExAnte {
 		    	j++;
 			}
 		}
-		filtered_bids = lib.cropOfferBids(filtered_bids, 0, j-1);
+		filtered_bids = lib.crop_bids(filtered_bids, 0, j-1);
 	    return (filtered_offers, filtered_bids);
 	}
 
@@ -377,30 +386,30 @@ contract ClearingExAnte {
 
         //Check whether offers or bids are empty
         if( filtered_offers.length == 0 || filtered_bids.length == 0 ) {
-        	if(verbose) string_to_log = lib.concatenateStrings(string_to_log,"\tNo clearing - supply and/or bids are empty\n");
+        	if(verbose) string_to_log = lib.concatenate_strings(string_to_log,"\tNo clearing - supply and/or bids are empty\n");
         }
 
         else { //Offers and bids are not empty
 
-			if(verbose) string_to_log = lib.concatenateStrings(string_to_log,"\tLength of offers and bids > 0. Starting clearing\n");
+			if(verbose) string_to_log = lib.concatenate_strings(string_to_log,"\tLength of offers and bids > 0. Starting clearing\n");
             if(shuffle) {//shuffling positions
-		    	filtered_offers = lib.shuffle_OfferBids(filtered_offers);
-		    	filtered_bids = lib.shuffle_OfferBids(filtered_bids);
+		    	filtered_offers = lib.shuffle_bids(filtered_offers);
+		    	filtered_bids = lib.shuffle_bids(filtered_bids);
 	    	}
 	    	//sorting positions by price, quality, and possibly quantity
             filtered_offers = srt.insertion_sort_offers_bids_price_quality(filtered_offers, true, false, simulation_test, false);
 	    	filtered_bids = srt.insertion_sort_offers_bids_price_quality(filtered_bids, false, false, simulation_test, false);
 
 	    	if(verbose) {
-	    		string_to_log = lib.concatenateStrings(lib.concatenateStrings(string_to_log,lib.concatenateStrings("\tOffers length: ",lib.uintToString(filtered_offers.length))),"\n");
-				string_to_log = lib.concatenateStrings(lib.concatenateStrings(string_to_log,lib.concatenateStrings("\tBids length: ",lib.uintToString(filtered_bids.length))),"\n");
+	    		string_to_log = lib.concatenate_strings(lib.concatenate_strings(string_to_log,lib.concatenate_strings("\tOffers length: ",lib.uint_to_string(filtered_offers.length))),"\n");
+				string_to_log = lib.concatenate_strings(lib.concatenate_strings(string_to_log,lib.concatenate_strings("\tBids length: ",lib.uint_to_string(filtered_bids.length))),"\n");
 	    	}
 
             Lb.LemLib.market_result[] memory tmp_market_results;
 
             //merging filtered offers and bids
             tmp_market_results = merge_offers_bids_memory(filtered_offers, filtered_bids);
-            if(verbose) string_to_log = lib.concatenateStrings(lib.concatenateStrings(string_to_log,lib.concatenateStrings("\tMerge offers/bid length: ",lib.uintToString(tmp_market_results.length))),"\n");
+            if(verbose) string_to_log = lib.concatenate_strings(lib.concatenate_strings(string_to_log,lib.concatenate_strings("\tMerge offers/bid length: ",lib.uint_to_string(tmp_market_results.length))),"\n");
 
             //calculating uniform and discriminative pricing
             tmp_market_results = calc_market_clearing_prices(tmp_market_results, uniform_pricing, discriminative_pricing);
@@ -410,7 +419,7 @@ contract ClearingExAnte {
                 	ClearingExAnte.temp_market_results.push(tmp_market_results[i]);
             	}
             }
-            if(verbose) string_to_log = lib.concatenateStrings(string_to_log,"\tCalculated clearing prices\n");
+            if(verbose) string_to_log = lib.concatenate_strings(string_to_log,"\tCalculated clearing prices\n");
 
             //Check whether market has cleared a volume
             if(writeFinalMarketResult && tmp_market_results.length > 0) {
@@ -440,8 +449,8 @@ contract ClearingExAnte {
             	}
             }
             else if (verbose) {
-                string_to_log=lib.concatenateStrings(string_to_log,"\tMarket Volume == 0 or empty market results for this clearing\n");
-                string_to_log=lib.concatenateStrings(lib.concatenateStrings(string_to_log,lib.concatenateStrings("\tMarket Results length:",lib.uintToString(ClearingExAnte.temp_market_results.length))),"\n");
+                string_to_log=lib.concatenate_strings(string_to_log,"\tMarket Volume == 0 or empty market results for this clearing\n");
+                string_to_log=lib.concatenate_strings(lib.concatenate_strings(string_to_log,lib.concatenate_strings("\tMarket Results length:",lib.uint_to_string(ClearingExAnte.temp_market_results.length))),"\n");
             }
         }
 	}
@@ -463,8 +472,8 @@ contract ClearingExAnte {
         }
         if(filtered_offers.length > 0 && filtered_bids.length > 0) { //Offers and bids are not empty and last update in offers/bids is newer than last clearing time
             if(shuffle) {
-		    	filtered_offers = lib.shuffle_OfferBids(filtered_offers);
-		    	filtered_bids = lib.shuffle_OfferBids(filtered_bids);
+		    	filtered_offers = lib.shuffle_bids(filtered_offers);
+		    	filtered_bids = lib.shuffle_bids(filtered_bids);
 	    	}
 
             filtered_offers = srt.insertion_sort_offers_bids_price_quality(filtered_offers, true, false, simulation_test, false);
@@ -482,8 +491,8 @@ contract ClearingExAnte {
 	//it performs the merge between a list of offers, and a list of bids. it produces an object of the type market_result.
 	function merge_offers_bids_memory(Lb.LemLib.offer_bid[] memory filtered_offers, Lb.LemLib.offer_bid[] memory filtered_bids) public view returns(Lb.LemLib.market_result[] memory) {
 	    //Insert cumulated bid energy into tables
-	    uint[] memory energy_cumulated_offers = lib.getEnergyCumulated(filtered_offers);
-	    uint[] memory energy_cumulated_bids = lib.getEnergyCumulated(filtered_bids);
+	    uint[] memory energy_cumulated_offers = lib.get_energy_cumulated(filtered_offers);
+	    uint[] memory energy_cumulated_bids = lib.get_energy_cumulated(filtered_bids);
 
 	    //merge bids and offers
 
@@ -560,7 +569,7 @@ contract ClearingExAnte {
 	    }
 	    //calculating the differences in the array of energy cumulated
 	    uint[] memory qties_energy_traded = new uint[](z);
-	    uint[] memory qtys_difference = lib.computeDifferences(energy_cumulated_finals, 0, z - 1);
+	    uint[] memory qtys_difference = lib.compute_differences(energy_cumulated_finals, 0, z - 1);
 	    qties_energy_traded[0] = energy_cumulated_finals[0];
 	    //assigning those differences to the array of energy traded
 	    for(i = 1; i < qties_energy_traded.length; i++) {
@@ -634,7 +643,7 @@ contract ClearingExAnte {
 
 	//update the balances of the user infos in the storage, given the total market results on storage as well. It returns the user infos with the updated balances
 	function update_balances_call() public view returns(Lb.LemLib.user[] memory) {
-		Lb.LemLib.user[] memory temp_balance_update = lib.copyArray_UserInfo(ClearingExAnte.user_infos, 0, ClearingExAnte.user_infos.length - 1);
+		Lb.LemLib.user[] memory temp_balance_update = lib.copy_array_user_info(ClearingExAnte.user_infos, 0, ClearingExAnte.user_infos.length - 1);
 		for(uint i = 0; i < ClearingExAnte.market_results_total.length; i++) {
 			int delta = int(ClearingExAnte.market_results_total[i].price_energy_market_uniform * ClearingExAnte.market_results_total[i].qty_energy_traded);//I don't divide by 1000, since there is no float
 			for(uint j = 0; j < temp_balance_update.length; j++) {
@@ -688,15 +697,15 @@ contract ClearingExAnte {
 	//it performs the full market clearing. The results are then stored in the variable market_results_total
 	function market_clearing(uint n_clearings, uint t_clearing_first, bool supplier_bids, bool uniform_pricing, bool discriminative_pricing, uint clearing_interval, uint t_clearing_start, bool shuffle, bool verbose, bool update_balances, bool simulation_test) public {
 	    if(verbose) {
-	    	string_to_log = lib.concatenateStrings("Market clearing started on the blockchain\nNumber of clearings: ",lib.uintToString(n_clearings));
-	    	string_to_log = lib.concatenateStrings(string_to_log,"\n");//two statements to reduce stack usage
+	    	string_to_log = lib.concatenate_strings("Market clearing started on the blockchain\nNumber of clearings: ",lib.uint_to_string(n_clearings));
+	    	string_to_log = lib.concatenate_strings(string_to_log,"\n");//two statements to reduce stack usage
 	    }
 	    for (uint i = 0; i < n_clearings; i++) {
             //Continuous clearing time, incrementing by market period
         	uint t_clearing_current = t_clearing_first + clearing_interval * i;
         	if(verbose) {
-        		string_to_log = lib.concatenateStrings(string_to_log, lib.concatenateStrings("Clearing number: ",lib.uintToString(i)));
-        		string_to_log = lib.concatenateStrings(string_to_log, lib.concatenateStrings(lib.concatenateStrings(". t_clearing_current = ", lib.uintToString(t_clearing_current)),".\n"));
+        		string_to_log = lib.concatenate_strings(string_to_log, lib.concatenate_strings("Clearing number: ",lib.uint_to_string(i)));
+        		string_to_log = lib.concatenate_strings(string_to_log, lib.concatenate_strings(lib.concatenate_strings(". t_clearing_current = ", lib.uint_to_string(t_clearing_current)),".\n"));
         	}
         	bool add_supplier_bids;
         	if (i == 0 && supplier_bids) add_supplier_bids = supplier_bids;
@@ -706,7 +715,7 @@ contract ClearingExAnte {
     	}
     	if(update_balances) update_balances_after_clearing_ex_ante();
     	if(verbose) {
-    		string_to_log = lib.concatenateStrings(string_to_log, "Updated balances of users");
+    		string_to_log = lib.concatenate_strings(string_to_log, "Updated balances of users");
     		emit logString(string_to_log);
     	}
 	}

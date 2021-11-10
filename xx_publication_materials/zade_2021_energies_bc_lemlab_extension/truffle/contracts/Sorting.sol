@@ -11,7 +11,7 @@ contract Sorting {
     //perform the quicksort over an array, given in input. it doesn't return anything since it modifies the given input inside
     //left and right are mark the start and the end index in between which, the quicksort is performed.
     //it is a recursive algorithm
-    function quickSort(uint[] memory arr, int left, int right) public pure {
+    function quick_sort(uint[] memory arr, int left, int right) public pure {
 	    int i = left;
 	    int j = right;
 	    if (i == j) return;
@@ -26,14 +26,14 @@ contract Sorting {
 	        }
 	    }
 	    if (left < j)
-	        quickSort(arr, left, j);
+	        quick_sort(arr, left, j);
 	    if (i < right)
-	        quickSort(arr, i, right);
+	        quick_sort(arr, i, right);
 	}
 
 	//same as quicksort(). Also, it modifies the list of indices of the array.
 	//It can be useful if with these new indices, one wants to reorder a second array
-	function quickSort_indices(uint[] memory arr, int left, int right, uint[] memory indices) public pure {
+	function quick_sort_indices(uint[] memory arr, int left, int right, uint[] memory indices) public pure {
 	    int i = left;
 	    int j = right;
 	    if (i == j) return;
@@ -51,12 +51,12 @@ contract Sorting {
 	        }
 	    }
 	    if (left < j)
-	        quickSort_indices(arr, left, j, indices);
+	        quick_sort_indices(arr, left, j, indices);
 	    if (i < right)
-	        quickSort_indices(arr, i, right, indices);
+	        quick_sort_indices(arr, i, right, indices);
 	}
-	//same as quickSort_indices(). it performs the quicksort over two arrays. the first array as priority
-	function quickSort_indices_two_arr(uint[] memory arr_first, uint[] memory arr_second, int left, int right, uint[] memory indices, bool ascending_first, bool ascending_second) public pure {
+	//same as quick_sort_indices(). it performs the quicksort over two arrays. the first array as priority
+	function quick_sort_indices_two_arr(uint[] memory arr_first, uint[] memory arr_second, int left, int right, uint[] memory indices, bool ascending_first, bool ascending_second) public pure {
 	    int i = left;
 	    int j = right;
 	    if (i == j) return;
@@ -95,14 +95,14 @@ contract Sorting {
 	        }
 	    }
 	    if (left < j)
-	        quickSort_indices_two_arr(arr_first, arr_second, left, j, indices, ascending_first, ascending_second);
+	        quick_sort_indices_two_arr(arr_first, arr_second, left, j, indices, ascending_first, ascending_second);
 	    if (i < right)
-	        quickSort_indices_two_arr(arr_first, arr_second, i, right, indices, ascending_first, ascending_second);
+	        quick_sort_indices_two_arr(arr_first, arr_second, i, right, indices, ascending_first, ascending_second);
 	}
 	//sorts an array using the countingsort. it returns the sorted array
-	function countingSort(uint[] memory data, bool ascending) public view returns(uint[] memory){
-	    uint max = lib.maxArray(data);
-	    uint min = lib.minArray(data);
+	function counting_sort(uint[] memory data, bool ascending) public view returns(uint[] memory){
+	    uint max = lib.max_array(data);
+	    uint min = lib.min_array(data);
 	    uint[] memory sorted = new uint[](data.length);
 	    uint[] memory count = new uint[](max-min);
 	    for (uint i = 0; i < data.length; i++) {
@@ -130,7 +130,7 @@ contract Sorting {
         return sorted;
 	}
 	//sorts an array using the countingsort. It doesn't return since the array is already modified inside
-	function countingSort_void(uint[] memory data, uint setSize) public pure {
+	function counting_sort_void(uint[] memory data, uint setSize) public pure {
         uint[] memory set = new uint[](setSize);
         for (uint i = 0; i < data.length; i++) {
             set[data[i]]++;
@@ -143,24 +143,24 @@ contract Sorting {
             }
         }
     }
-	//same as countingSort() but it returns the indices of the sorted array
-	function countingSort_indices(uint[] memory data, bool ascending, uint start, uint end) public view returns(uint[] memory){
-	    uint[] memory data_cropped = lib.cropArray(data, start, end);
-	    //data_cropped = normalizeArr(data_cropped);
+	//same as counting_sort() but it returns the indices of the sorted array
+	function counting_sort_indices(uint[] memory data, bool ascending, uint start, uint end) public view returns(uint[] memory){
+	    uint[] memory data_cropped = lib.crop_array(data, start, end);
+	    //data_cropped = normalize_array(data_cropped);
 	    
-	    uint[] memory indices = lib.getIndices(data.length);
+	    uint[] memory indices = lib.get_indices(data.length);
 	    
 	    uint[] memory sorted_indices = new uint[](indices.length);
 	    for (uint i = 0; i < sorted_indices.length; i++) {
             sorted_indices[i] = indices[i];
 	    }
 	    
-	    uint[] memory count = lib.getCount(data_cropped);
+	    uint[] memory count = lib.get_count(data_cropped);
 	    
         //count size = max-min+1
         //data size = full data.length(no start/end)
         //indices size = full data.length(no start/end)
-        uint[][] memory count_indices = lib.getCountIndices(count, data, indices, start, end);
+        uint[][] memory count_indices = lib.get_count_indices(count, data, indices, start, end);
         //count_indices size = max-min+1 data cropped
         
         uint z = start;
@@ -185,7 +185,7 @@ contract Sorting {
 	}
 	//using countingsort, it sorts an array of integers, then it sorts an array of offer_bid based on the same sorting and returns it.
 	function get_indices_and_sort_countingsort(uint[] memory values, Lb.LemLib.offer_bid[] memory offers_bids, bool ascending) private view returns(Lb.LemLib.offer_bid[] memory) {
-		uint[] memory sorted_indices = Sorting.countingSort_indices(values, ascending, 0, values.length-1);
+		uint[] memory sorted_indices = Sorting.counting_sort_indices(values, ascending, 0, values.length-1);
 		Lb.LemLib.offer_bid[] memory sorted = new Lb.LemLib.offer_bid[](values.length);
 		for (uint i = 0; i < sorted_indices.length; i++) {
             sorted[i] = offers_bids[sorted_indices[i]];
@@ -194,14 +194,14 @@ contract Sorting {
 	}
 	//same as get_indices_and_sort_countingsort(), but it sorts using two arrays(two keys)
 	function get_indices_and_sort_countingsort_two_arr(uint[] memory values_first, uint[] memory values_second, Lb.LemLib.offer_bid[] memory offers_bids, bool ascending_first, bool ascending_second) public view returns(Lb.LemLib.offer_bid[] memory) {
-		uint[] memory sorted_indices = Sorting.countingSort_indices(values_first, ascending_first, 0, values_first.length-1);
+		uint[] memory sorted_indices = Sorting.counting_sort_indices(values_first, ascending_first, 0, values_first.length-1);
 		
-		uint[] memory sorted_first = lib.reorderArr(sorted_indices, values_first, 0, values_first.length-1);
-		uint[] memory reordered_second = lib.reorderArr(sorted_indices, values_second, 0, values_second.length-1);
+		uint[] memory sorted_first = lib.reorder_array(sorted_indices, values_first, 0, values_first.length-1);
+		uint[] memory reordered_second = lib.reorder_array(sorted_indices, values_second, 0, values_second.length-1);
 		
 	    sorted_indices = countingsort_by_second_value_indices(sorted_indices, sorted_first, reordered_second, ascending_second);
 	    
-	    Lb.LemLib.offer_bid[] memory sorted_offers_bids = lib.reorderArr_OfferBid(sorted_indices, offers_bids);
+	    Lb.LemLib.offer_bid[] memory sorted_offers_bids = lib.reorder_array_bids(sorted_indices, offers_bids);
 
 	    return sorted_offers_bids;
 	}
@@ -227,8 +227,8 @@ contract Sorting {
 	}
 	//it reorders an array based on the sorting done on another array. the sorting is done using the countingsort
 	function sort_and_reorder_arr(uint[] memory data, bool ascending, uint start, uint end, uint[] memory arr) public view returns(uint[] memory) {
-	    uint[] memory modified_indices = countingSort_indices(data, ascending, start, end);
-	    uint[] memory reordered_arr = lib.reorderArr(modified_indices, arr, 0, arr.length-1);
+	    uint[] memory modified_indices = counting_sort_indices(data, ascending, start, end);
+	    uint[] memory reordered_arr = lib.reorder_array(modified_indices, arr, 0, arr.length-1);
 	    return reordered_arr;
 	}
 	//using quicksort, it sorts an array of integers, then it sorts an array of offer_bid based on the same sorting and returns it.
@@ -237,9 +237,9 @@ contract Sorting {
 	    for (uint z = 0; z < indices.length; z++) {
             indices[z] = z;
 	    }
-		Sorting.quickSort_indices(values, 0, int(values.length-1), indices);
+		Sorting.quick_sort_indices(values, 0, int(values.length-1), indices);
 		if(!ascending){
-		    indices = lib.reverseArray(indices, 0, indices.length - 1);
+		    indices = lib.reverse_array(indices, 0, indices.length - 1);
 		}
 		Lb.LemLib.offer_bid[] memory sorted = new Lb.LemLib.offer_bid[](values.length);
 		for (uint z = 0; z < indices.length; z++) {
@@ -276,7 +276,7 @@ contract Sorting {
 	    for (uint z = 0; z < indices.length; z++) {
 	        indices[z] = z;
 	    }
-		Sorting.quickSort_indices_two_arr(values_first, values_second, 0, int(values_first.length-1), indices, ascending_price, ascending_quantity);
+		Sorting.quick_sort_indices_two_arr(values_first, values_second, 0, int(values_first.length-1), indices, ascending_price, ascending_quantity);
 		Lb.LemLib.offer_bid[] memory sorted = new Lb.LemLib.offer_bid[](values_first.length);
 
 		for (uint z = 0; z < indices.length; z++) {
@@ -365,18 +365,18 @@ contract Sorting {
 	}
 	//same as getInsertionSortIndices_two_keys, different version not optimized
 	function get_insertion_sort_indices_two_keys_not_optimized(uint[] memory arr_first, uint[] memory arr_second, bool ascending_first, bool ascending_second) public view returns(uint[] memory) {
-	    uint[] memory new_indices = lib.getIndices(arr_first.length);
+	    uint[] memory new_indices = lib.get_indices(arr_first.length);
 		uint new_ind;
 		
-		uint[] memory arr_first_new = lib.copyArray(arr_first, 0, 1);
-        uint[] memory arr_second_new = lib.copyArray(arr_first, 0, 1);
+		uint[] memory arr_first_new = lib.copy_array(arr_first, 0, 1);
+        uint[] memory arr_second_new = lib.copy_array(arr_first, 0, 1);
 		
 		for(uint i = 1; i < new_indices.length; i++) {
-	        new_ind = lib.findPosition_new_element_sort(i - 1, new_indices[i], arr_first_new, arr_second_new, ascending_first, ascending_second);
+	        new_ind = lib.find_position_new_element_sort(i - 1, new_indices[i], arr_first_new, arr_second_new, ascending_first, ascending_second);
             if(new_ind < i) {
                 new_indices = lib.slice_elements_arr(new_indices, new_ind, i);
-                arr_first_new = lib.reorderArr(new_indices, arr_first, 0, i);
-                arr_second_new = lib.reorderArr(new_indices, arr_second, 0, i);
+                arr_first_new = lib.reorder_array(new_indices, arr_first, 0, i);
+                arr_second_new = lib.reorder_array(new_indices, arr_second, 0, i);
             }
             if(i < arr_first.length - 1) {
                 arr_first_new[i + 1] = arr_first[i + 1];
@@ -391,7 +391,7 @@ contract Sorting {
 		uint[] memory prices = lib.arr_of_prices_offerbids(offers_bids);
 		uint[] memory quantities = lib.arr_of_quantities_offerbids(offers_bids);
 		uint[] memory new_indices = get_insertion_sort_indices_two_keys(prices, quantities, ascending_price, ascending_quantity);
-		return lib.reorderArr_OfferBid(new_indices, offers_bids);
+		return lib.reorder_array_bids(new_indices, offers_bids);
 	}
 	//using insertionsort, sorts a list of offer_bid by price and then quality. if simulation_test is true, it also performs the sort over the additional key of quantity
 	function insertion_sort_offers_bids_price_quality(Lb.LemLib.offer_bid[] memory offers_bids, bool ascending_price,  bool ascending_quality, bool simulation_test, bool ascending_quantity) public view returns(Lb.LemLib.offer_bid[] memory) {
@@ -406,7 +406,7 @@ contract Sorting {
 		else {
 			 new_indices = get_insertion_sort_indices_two_keys(prices, qualities, ascending_price, ascending_quality);
 		}
-		return lib.reorderArr_OfferBid(new_indices, offers_bids);
+		return lib.reorder_array_bids(new_indices, offers_bids);
 	}
 	//aggregate positions with the same user id, same price, and same quality. the quantity of energy is summed up
     function aggregate_identical_positions(Lb.LemLib.offer_bid[] memory offers_bids, bool simulation_test) public view returns (Lb.LemLib.offer_bid[] memory) {
@@ -443,9 +443,9 @@ contract Sorting {
 	    for (uint z = 0; z < indices.length; z++) {
             indices[z] = z;
 	    }
-		Sorting.quickSort_indices(values, 0, int(values.length-1), indices);
+		Sorting.quick_sort_indices(values, 0, int(values.length-1), indices);
 		if(!ascending){
-		    indices = lib.reverseArray(indices, 0, indices.length - 1);
+		    indices = lib.reverse_array(indices, 0, indices.length - 1);
 		}
 		Lb.LemLib.market_result[] memory sorted = new Lb.LemLib.market_result[](values.length);
 		for (uint z = 0; z < indices.length; z++) {

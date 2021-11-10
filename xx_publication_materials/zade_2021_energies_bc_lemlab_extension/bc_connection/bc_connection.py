@@ -387,7 +387,7 @@ class BlockchainConnection:
         # self.update_balances_after_clearing_ex_ante()
 
     # clears temporal data (offers, bids, market results)
-    def clear_temp_data(self):
+    def clear_temp_clearing_data(self):
         try:
             tx_hash = self.functions.clear_temp_data().transact({'from': self.coinbase})
             self.wait_for_transact(tx_hash)
@@ -404,9 +404,17 @@ class BlockchainConnection:
                 except:
                     limit_to_remove -= 50
 
-                    # clears permanent data (offers, bids, user/meter infos)
+    def clear_dynamic_market_data_tables(self):
+        """
+        Clears all content from tables that contain dynamic market data
+        """
+        try:
+            tx_hash = self.functions.clear_dynamic_market_data_tables().transact({'from': self.coinbase})
+            self.wait_for_transact(tx_hash)
+        except Exception as e:
+            print(e)
 
-    def clear_permanent_data(self):
+    def clear_permanent_clearing_data(self):
         try:
             tx_hash = self.functions.clear_permanent_data().transact({'from': self.coinbase})
             self.wait_for_transact(tx_hash)
@@ -459,7 +467,7 @@ class BlockchainConnection:
     #################################################
     # Functions for the Settlement.sol contract
     #################################################
-    def clear_data(self):
+    def clear_settlement_data(self):
         try:
             tx_hash = self.functions.clear_data().transact({'from': self.coinbase})
             self.wait_for_transact(tx_hash)
