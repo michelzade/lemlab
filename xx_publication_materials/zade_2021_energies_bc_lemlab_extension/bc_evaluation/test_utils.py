@@ -346,7 +346,9 @@ def reset_dynamic_market_data_tables(db_obj, bc_obj_market, bc_obj_settlement):
     """
     # Database reset
     for table in db_obj.list_tables:
-        if table.name != "info_user" or table.name != "info_meter":
+        if table.name == "info_user" or table.name == "info_meter":
+            pass
+        else:
             db_obj._clear_table(table.name)
     # Blockchain reset
     bc_obj_market.clear_dynamic_market_data_tables()

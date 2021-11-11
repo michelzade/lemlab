@@ -23,10 +23,10 @@ def test_clearing_results_ex_ante():
     # Sort market results and reset indices
     clearing_ex_ante_results_bc = clearing_ex_ante_results_bc.sort_values(
         by=[db_obj.db_param.ID_USER_OFFER, db_obj.db_param.TS_DELIVERY, db_obj.db_param.QTY_ENERGY_TRADED,
-            db_obj.db_param.PRICE_ENERGY_OFFER], ascending=[True, True, True, True])
+            db_obj.db_param.PRICE_ENERGY_OFFER, db_obj.db_param.ID_USER_BID], ascending=[True, True, True, True, True])
     clearing_ex_ante_results_db = clearing_ex_ante_results_db.sort_values(
         by=[db_obj.db_param.ID_USER_OFFER, db_obj.db_param.TS_DELIVERY, db_obj.db_param.QTY_ENERGY_TRADED,
-            db_obj.db_param.PRICE_ENERGY_OFFER], ascending=[True, True, True, True])
+            db_obj.db_param.PRICE_ENERGY_OFFER, db_obj.db_param.ID_USER_BID], ascending=[True, True, True, True, True])
     clearing_ex_ante_results_bc = clearing_ex_ante_results_bc.reset_index(drop=True)
     clearing_ex_ante_results_db = clearing_ex_ante_results_db.reset_index(drop=True)
     clearing_ex_ante_results_bc = clearing_ex_ante_results_bc.reindex(sorted(clearing_ex_ante_results_bc.columns),
