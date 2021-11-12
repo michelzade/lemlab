@@ -13,11 +13,12 @@ from lemlab.lem import clearing_ex_ante, settlement
 from current_scenario_file import scenario_file_path
 
 
-def setup_test_general(generate_random_test_data=False):
-    yaml_file = scenario_file_path
+def setup_test_general(generate_random_test_data=False, test_config_path=None):
+    if test_config_path is None:
+        test_config_path = scenario_file_path
 
     # load configuration file
-    with open(f"" + yaml_file) as config_file:
+    with open(f"" + test_config_path) as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
 
     # Create a db connection object
@@ -276,7 +277,8 @@ def settle_market_db(config, db_obj, ts_delivery_list, path_sim):
     settlement.determine_balancing_energy(db_obj, ts_delivery_list)
 
     # Set settlement prices in db and bc
-    settlement.set_prices_settlement(db_obj=db_obj, path_simulation=path_sim, list_ts_delivery=ts_delivery_list)
+    settlement.set_prices_settlement(db_obj=db_obj, path_simulation=path_sim, list_ts_delivery=ts_delivery_list,
+                                     config_dict=config["lem"])
 
     # Update balances according to balancing energies db and bc
     ts_now = round(time.time())

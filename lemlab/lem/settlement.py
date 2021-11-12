@@ -334,19 +334,21 @@ def update_balance_balancing_costs(db_obj, t_now, lem_config, list_ts_delivery, 
         db_obj.update_balance_user(pd.DataFrame.from_dict(dict_transactions))
 
 
-def set_prices_settlement(db_obj, path_simulation, list_ts_delivery):
+def set_prices_settlement(db_obj, path_simulation, list_ts_delivery, config_dict=None):
     """
     Determine levy energy debit and credit and add transactions to database.
 
     :param db_obj: instance of DatabaseConnection
     :param path_simulation: string, path to simulation_results folder
     :param list_ts_delivery: list of integers, unix timestamps of ts_deliveries to be processed
+    :param config_dict: dictionary with settlement prices
 
     :return None:
     """
-    # load lem config file
-    with open(f"{path_simulation}/lem/config_account.json", "r") as read_file:
-        config_dict = json.load(read_file)
+    if config_dict is None:
+        # load lem config file
+        with open(f"{path_simulation}/lem/config_account.json", "r") as read_file:
+            config_dict = json.load(read_file)
     # conversion factor from off chain to on chain currency
     euro_kwh_to_sigma_wh = db_obj.db_param.EURO_TO_SIGMA / 1000
 

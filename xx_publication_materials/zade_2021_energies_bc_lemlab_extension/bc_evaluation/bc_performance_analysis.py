@@ -1,4 +1,6 @@
+import os
 import time
+import json
 import test_utils
 import numpy as np
 import pandas as pd
@@ -6,9 +8,14 @@ import matplotlib.pyplot as plt
 from lemlab.lem import clearing_ex_ante
 
 
-def compute_performance_analysis():
+def compute_performance_analysis(path_results=None):
+    print(f"Performance analysis started...")
     config, db_obj, bc_obj_clearing_ex_ante, bc_obj_settlement = test_utils.setup_test_general(
-        generate_random_test_data=False)
+        generate_random_test_data=False, test_config_path="sim_test_config.yaml")
+
+    if path_results is not None:
+        with open(f"{path_results}/evaluation_config.json", "w+") as write_file:
+            json.dump(config, write_file)
 
     # Clear all tables
     test_utils.reset_all_market_tables(db_obj=db_obj, bc_obj_market=bc_obj_clearing_ex_ante,
@@ -28,8 +35,10 @@ def compute_performance_analysis():
 
     timing_results = pd.DataFrame(index=n_positions_range)
 
+    print(f"Setup complete.")
     # Loop through all position samples and execute market clearing
     for n_positions in n_positions_range:
+        print(f"{n_positions} positions inserted.")
         # Reset market tables before each iteration
         test_utils.reset_dynamic_market_data_tables(db_obj=db_obj, bc_obj_market=bc_obj_clearing_ex_ante,
                                                     bc_obj_settlement=bc_obj_settlement)
@@ -46,7 +55,7 @@ def compute_performance_analysis():
         shuffle = False
         plotting = False
         verbose = False
-        sim_path = "../../../simulation_results/test_sim"
+        sim_path = ""
 
         #############################
         # Central database LEM ######
@@ -77,13 +86,15 @@ def compute_performance_analysis():
             timing_results.loc[n_positions, "t_log_meter_readings_db"] = t_log_meter_readings_db
             # Settle market ###
             t_settle_market_start_db = time.time()
-            test_utils.settle_market_db(config=config, db_obj=db_obj, ts_delivery_list=ts_delivery_list, path_sim=sim_path)
+            test_utils.settle_market_db(config=config, db_obj=db_obj, ts_delivery_list=ts_delivery_list,
+                                        path_sim=sim_path)
             t_settle_market_end_db = time.time()
             t_settle_market_db = t_settle_market_end_db - t_settle_market_start_db
             timing_results.loc[n_positions, "t_settle_market_db"] = t_settle_market_db
             # Full computation time ###
             t_full_market_db = t_post_positions_db + t_clear_market_db + t_log_meter_readings_db + t_settle_market_db
             timing_results.loc[n_positions, "t_full_market_db"] = t_full_market_db
+            print(f"Central LEM successfully cleared {n_positions} positions.")
         except Exception as e:
             print(e)
             timing_results.loc[n_positions, "db_exception"] = e
@@ -123,15 +134,20 @@ def compute_performance_analysis():
             # Full computation time ###
             t_full_market_bc = t_post_positions_bc + t_clear_market_bc + t_log_meter_readings_bc + t_settle_market_bc
             timing_results.loc[n_positions, "t_full_market_bc"] = t_full_market_bc
+            print(f"Blockchain LEM successfully cleared {n_positions} positions.")
         except Exception as e:
             print(e)
             timing_results.loc[n_positions, "bc_exception"] = e
             continue
 
+        plot_performance_analysis_results(timing_results)
+
+    timing_results.to_csv(f"{path_results}/timing_results.csv")
+
     return timing_results
 
 
-def plot_performance_analysis_results(results):
+def plot_performance_analysis_results(results, path_results=None):
     fig = plt.figure()
     ax = plt.subplot(111)
     for column in results.columns:
@@ -144,9 +160,25 @@ def plot_performance_analysis_results(results):
     ax.set_position([box.x0, box.y0, box.width * 0.7, box.height])
     # Put a legend to the right of the current axis
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)
+    if path_results is not None:
+        fig.savefig(f"{path_results}/performance_analysis.svg")
     plt.show()
 
 
+def create_results_folder(path_results):
+    current_time_str = pd.Timestamp.now().strftime("%Y_%m_%d_%H_%M")
+    os.mkdir(f"{path_results}/{current_time_str}")
+
+    return f"{path_results}/{current_time_str}"
+
+
 if __name__ == '__main__':
-    timing_results = compute_performance_analysis()
-    plot_performance_analysis_results(timing_results)
+    # Create result folder
+    result_folder = create_results_folder(path_results="evaluation_results")
+    # Compute performance analysis
+    timing_results = compute_performance_analysis(path_results=result_folder)
+    # Plot results
+    plot_performance_analysis_results(timing_results, path_results=result_folder)
+    # Load results and plot them
+    timing_results_read = pd.read_csv(f"{result_folder}/timing_results.csv", index_col=0)
+    plot_performance_analysis_results(timing_results_read)
