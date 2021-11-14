@@ -15,7 +15,7 @@ def setup():
         test_utils.settlement_test(generate_random_test_data=True)
 
 
-def test_clearing_results_ex_ante():
+def test_clearing_results_ex_ante(db_obj=None, bc_obj_clearing_ex_ante=None):
     # Get market results from db and bc
     clearing_ex_ante_results_db, _ = db_obj.get_results_market_ex_ante()
     clearing_ex_ante_results_bc = bc_obj_clearing_ex_ante.get_market_results()
@@ -38,7 +38,7 @@ def test_clearing_results_ex_ante():
     pd.testing.assert_frame_equal(clearing_ex_ante_results_bc, clearing_ex_ante_results_db, check_dtype=False)
 
 
-def test_meter_readings():
+def test_meter_readings(db_obj=None, bc_obj_settlement=None):
     # Get meter readings delta
     meter_readings_delta_bc = bc_obj_settlement.get_meter_readings_delta().sort_values(
         by=[db_obj.db_param.TS_DELIVERY, db_obj.db_param.ID_METER])
@@ -51,7 +51,7 @@ def test_meter_readings():
     pd.testing.assert_frame_equal(meter_readings_delta_bc, meter_readings_delta_db, check_dtype=False)
 
 
-def test_balancing_energy():
+def test_balancing_energy(db_obj=None, bc_obj_settlement=None):
     # Get energy balances from db and bc
     balancing_energies_db = db_obj.get_energy_balancing()
     balancing_energies_bc = bc_obj_settlement.get_energy_balances()
@@ -61,11 +61,11 @@ def test_balancing_energy():
     assert not balancing_energies_bc.empty, "Error: balancing energy is empty in bc"
 
     # Sort balancing energies by meter id and ts delivery
-    balancing_energies_db = balancing_energies_db.sort_values(by=[bc_obj_clearing_ex_ante.bc_param.ID_METER,
-                                                                  bc_obj_clearing_ex_ante.bc_param.TS_DELIVERY])
+    balancing_energies_db = balancing_energies_db.sort_values(by=[db_obj.db_param.ID_METER,
+                                                                  db_obj.db_param.TS_DELIVERY])
     balancing_energies_db = balancing_energies_db.reset_index(drop=True)
-    balancing_energies_bc = balancing_energies_bc.sort_values(by=[bc_obj_clearing_ex_ante.bc_param.ID_METER,
-                                                                  bc_obj_clearing_ex_ante.bc_param.TS_DELIVERY])
+    balancing_energies_bc = balancing_energies_bc.sort_values(by=[db_obj.db_param.ID_METER,
+                                                                  db_obj.db_param.TS_DELIVERY])
     balancing_energies_bc = balancing_energies_bc.reset_index(drop=True)
 
     # Check whether balancing energies are equal on bc and db
@@ -78,22 +78,22 @@ def test_balancing_energy():
         pd.testing.assert_frame_equal(balancing_energies_db, balancing_energies_bc, check_dtype=False)
 
 
-def test_prices_settlement():
+def test_prices_settlement(db_obj=None, bc_obj_settlement=None):
     # Get settlement prices from db and bc
     settlement_prices_db = db_obj.get_prices_settlement()
     settlement_prices_db = settlement_prices_db.sort_values(by=[db_obj.db_param.TS_DELIVERY,
                                                                 db_obj.db_param.PRICE_ENERGY_BALANCING_POSITIVE])
     settlement_prices_db = settlement_prices_db.reset_index(drop=True)
     settlement_prices_bc = bc_obj_settlement.get_prices_settlement()
-    settlement_prices_bc = settlement_prices_bc.sort_values(by=[bc_obj_clearing_ex_ante.bc_param.TS_DELIVERY,
-                                                                bc_obj_clearing_ex_ante.bc_param.PRICE_ENERGY_BALANCING_POSITIVE])
+    settlement_prices_bc = settlement_prices_bc.sort_values(by=[db_obj.db_param.TS_DELIVERY,
+                                                                db_obj.db_param.PRICE_ENERGY_BALANCING_POSITIVE])
     settlement_prices_bc = settlement_prices_bc.reset_index(drop=True)
 
     # Check whether settlement prices are equal on db and bc
     pd.testing.assert_frame_equal(settlement_prices_db, settlement_prices_bc)
 
 
-def test_transaction_logs():
+def test_transaction_logs(db_obj=None, bc_obj_settlement=None):
     # Get all logged transactions from db and bc
     log_transactions_db = db_obj.get_logs_transactions()
     log_transactions_db = log_transactions_db.loc[
@@ -113,7 +113,7 @@ def test_transaction_logs():
     pd.testing.assert_frame_equal(log_transactions_db, log_transactions_bc)
 
 
-def test_user_info():
+def test_user_info(db_obj=None, bc_obj_clearing_ex_ante=None):
     info_user_db = db_obj.get_info_user()
     info_user_db = info_user_db.sort_values(by=[db_obj.db_param.ID_USER])
     info_user_db = info_user_db.reset_index(drop=True)
@@ -125,7 +125,7 @@ def test_user_info():
     pd.testing.assert_frame_equal(info_user_db, info_user_bc)
 
 
-def test_meter_info():
+def test_meter_info(db_obj=None, bc_obj_clearing_ex_ante=None):
     info_meter_db = db_obj.get_info_meter()
     info_meter_db = info_meter_db.sort_values(by=[db_obj.db_param.ID_METER])
     info_meter_db = info_meter_db.reset_index(drop=True)

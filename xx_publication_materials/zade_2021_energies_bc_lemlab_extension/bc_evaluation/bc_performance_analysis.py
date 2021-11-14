@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from lemlab.lem import clearing_ex_ante
+from bc_test_settlement import test_meter_info, test_user_info, test_meter_readings, test_prices_settlement, \
+    test_transaction_logs, test_balancing_energy, test_clearing_results_ex_ante
 
 
 def compute_performance_analysis(path_results=None):
@@ -33,12 +35,14 @@ def compute_performance_analysis(path_results=None):
                                   config["bc_performance_analysis"]["n_positions"]["max"],
                                   config["bc_performance_analysis"]["n_positions"]["increment"])
 
-    timing_results = pd.DataFrame(index=n_positions_range)
+    df_timing_results = pd.DataFrame(index=n_positions_range)
+    df_equality_check = pd.DataFrame(index=n_positions_range)
+    df_gas_estimates = pd.DataFrame(index=n_positions_range)
 
     print(f"Setup complete.")
     # Loop through all position samples and execute market clearing
     for n_positions in n_positions_range:
-        print(f"{n_positions} positions inserted.")
+        print(f"Test with {n_positions} positions.")
         # Reset market tables before each iteration
         test_utils.reset_dynamic_market_data_tables(db_obj=db_obj, bc_obj_market=bc_obj_clearing_ex_ante,
                                                     bc_obj_settlement=bc_obj_settlement)
@@ -66,7 +70,7 @@ def compute_performance_analysis(path_results=None):
             db_obj.post_positions(positions)
             t_post_positions_end_db = time.time()
             t_post_positions_db = t_post_positions_end_db - t_post_positions_start_db
-            timing_results.loc[n_positions, "t_post_positions_db"] = t_post_positions_db
+            df_timing_results.loc[n_positions, "t_post_positions_db"] = t_post_positions_db
             # Clear market ex ante ###
             t_clear_market_start_db = time.time()
             clearing_ex_ante.market_clearing(db_obj=db_obj, config_lem=config["lem"], config_retailer=config_retailer,
@@ -74,7 +78,7 @@ def compute_performance_analysis(path_results=None):
                                              rounding_method=False)
             t_clear_market_end_db = time.time()
             t_clear_market_db = t_clear_market_end_db - t_clear_market_start_db
-            timing_results.loc[n_positions, "t_clear_market_db"] = t_clear_market_db
+            df_timing_results.loc[n_positions, "t_clear_market_db"] = t_clear_market_db
             # Simulate meter readings from market results with random errors for settlement
             simulated_meter_readings_delta, ts_delivery_list = test_utils.simulate_meter_readings_from_market_results(
                 db_obj=db_obj, rand_percent_var=15)
@@ -83,22 +87,22 @@ def compute_performance_analysis(path_results=None):
             db_obj.log_readings_meter_delta(simulated_meter_readings_delta)
             t_log_meter_readings_end_db = time.time()
             t_log_meter_readings_db = t_log_meter_readings_end_db - t_log_meter_readings_start_db
-            timing_results.loc[n_positions, "t_log_meter_readings_db"] = t_log_meter_readings_db
+            df_timing_results.loc[n_positions, "t_log_meter_readings_db"] = t_log_meter_readings_db
             # Settle market ###
             t_settle_market_start_db = time.time()
             test_utils.settle_market_db(config=config, db_obj=db_obj, ts_delivery_list=ts_delivery_list,
                                         path_sim=sim_path)
             t_settle_market_end_db = time.time()
             t_settle_market_db = t_settle_market_end_db - t_settle_market_start_db
-            timing_results.loc[n_positions, "t_settle_market_db"] = t_settle_market_db
+            df_timing_results.loc[n_positions, "t_settle_market_db"] = t_settle_market_db
             # Full computation time ###
             t_full_market_db = t_post_positions_db + t_clear_market_db + t_log_meter_readings_db + t_settle_market_db
-            timing_results.loc[n_positions, "t_full_market_db"] = t_full_market_db
+            df_timing_results.loc[n_positions, "t_full_market_db"] = t_full_market_db
             print(f"Central LEM successfully cleared {n_positions} positions.")
         except Exception as e:
             print(e)
-            timing_results.loc[n_positions, "db_exception"] = e
-            continue
+            df_timing_results.loc[n_positions, "db_exception"] = e
+            break
 
         #############################
         # Blockchain LEM ############
@@ -110,41 +114,101 @@ def compute_performance_analysis(path_results=None):
             bc_obj_clearing_ex_ante.push_all_positions(positions, temporary=True, permanent=False)
             t_post_positions_end_bc = time.time()
             t_post_positions_bc = t_post_positions_end_bc - t_post_positions_start_bc
-            timing_results.loc[n_positions, "t_post_positions_bc"] = t_post_positions_bc
+            df_timing_results.loc[n_positions, "t_post_positions_bc"] = t_post_positions_bc
             # Clear market ex ante ###
             t_clear_market_start_bc = time.time()
             bc_obj_clearing_ex_ante.market_clearing_ex_ante(config["lem"], config_retailer=config_retailer,
                                                             t_override=t_override, shuffle=shuffle, verbose=verbose)
             t_clear_market_end_bc = time.time()
             t_clear_market_bc = t_clear_market_end_bc - t_clear_market_start_bc
-            timing_results.loc[n_positions, "t_clear_market_bc"] = t_clear_market_bc
+            df_timing_results.loc[n_positions, "t_clear_market_bc"] = t_clear_market_bc
             # Log meter readings to LEM ###
             t_log_meter_readings_start_bc = time.time()
             bc_obj_settlement.log_meter_readings_delta(simulated_meter_readings_delta)
             t_log_meter_readings_end_bc = time.time()
             t_log_meter_readings_bc = t_log_meter_readings_end_bc - t_log_meter_readings_start_bc
-            timing_results.loc[n_positions, "t_log_meter_readings_bc"] = t_log_meter_readings_bc
+            df_timing_results.loc[n_positions, "t_log_meter_readings_bc"] = t_log_meter_readings_bc
             # Settle market ###
             t_settle_market_start_bc = time.time()
             test_utils.settle_market_bc(config=config, bc_obj_settlement=bc_obj_settlement,
                                         ts_delivery_list=ts_delivery_list)
             t_settle_market_end_bc = time.time()
             t_settle_market_bc = t_settle_market_end_bc - t_settle_market_start_bc
-            timing_results.loc[n_positions, "t_settle_market_bc"] = t_settle_market_bc
+            df_timing_results.loc[n_positions, "t_settle_market_bc"] = t_settle_market_bc
             # Full computation time ###
             t_full_market_bc = t_post_positions_bc + t_clear_market_bc + t_log_meter_readings_bc + t_settle_market_bc
-            timing_results.loc[n_positions, "t_full_market_bc"] = t_full_market_bc
+            df_timing_results.loc[n_positions, "t_full_market_bc"] = t_full_market_bc
             print(f"Blockchain LEM successfully cleared {n_positions} positions.")
         except Exception as e:
             print(e)
-            timing_results.loc[n_positions, "bc_exception"] = e
-            continue
+            df_timing_results.loc[n_positions, "bc_exception"] = e
+            break
 
-        plot_performance_analysis_results(timing_results)
+        # Check equality of db and bc entries
+        try:
+            test_user_info(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante)
+            df_equality_check.loc[n_positions, "user_info_equal"] = True
+        except AssertionError as a:
+            df_equality_check.loc[n_positions, "user_info_equal"] = False
+            pass
 
-    timing_results.to_csv(f"{path_results}/timing_results.csv")
+        try:
+            test_meter_info(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante)
+            df_equality_check.loc[n_positions, "meter_info_equal"] = True
+        except AssertionError:
+            df_equality_check.loc[n_positions, "meter_info_equal"] = False
+            pass
 
-    return timing_results
+        try:
+            test_clearing_results_ex_ante(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante)
+            df_equality_check.loc[n_positions, "market_results_equal"] = True
+        except AssertionError:
+            df_equality_check.loc[n_positions, "market_results_equal"] = False
+            pass
+
+        try:
+            test_meter_readings(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
+            df_equality_check.loc[n_positions, "meter_readings_equal"] = True
+        except AssertionError:
+            df_equality_check.loc[n_positions, "meter_readings_equal"] = False
+            pass
+
+        try:
+            test_prices_settlement(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
+            df_equality_check.loc[n_positions, "prices_settlement_equal"] = True
+        except AssertionError:
+            df_equality_check.loc[n_positions, "prices_settlement_equal"] = False
+            pass
+
+        try:
+            test_balancing_energy(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
+            df_equality_check.loc[n_positions, "balancing_energy_equal"] = True
+        except AssertionError:
+            df_equality_check.loc[n_positions, "balancing_energy_equal"] = False
+            pass
+
+        try:
+            test_transaction_logs(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
+            df_equality_check.loc[n_positions, "transaction_logs_equal"] = True
+        except AssertionError:
+            df_equality_check.loc[n_positions, "transaction_logs_equal"] = False
+            pass
+
+        if (df_equality_check.loc[n_positions, :] == True).all():
+            df_equality_check.loc[n_positions, "data_equal"] = True
+        else:
+            df_equality_check.loc[n_positions, "data_equal"] = False
+
+        # Plot results after each iteration
+        plot_performance_analysis_results(df_timing_results, path_results=path_results)
+
+    if df_timing_results.empty:
+        print(f"No results were computed.")
+    else:
+        plot_performance_analysis_results(df_timing_results, path_results=path_results)
+        df_timing_results.to_csv(f"{path_results}/timing_results.csv")
+
+    return df_timing_results, df_equality_check, df_gas_estimates
 
 
 def plot_performance_analysis_results(results, path_results=None):
@@ -152,9 +216,9 @@ def plot_performance_analysis_results(results, path_results=None):
     ax = plt.subplot(111)
     for column in results.columns:
         ax.plot(results.loc[:, column], marker="x", label=column[2:].replace("_", " "))
-    plt.grid()
-    plt.ylabel("Computation time in s")
-    plt.xlabel("Number of inserted buy and ask bids")
+    ax.grid()
+    ax.set_ylabel("Computation time in s")
+    ax.set_xlabel("Number of inserted buy and ask bids")
     # Shrink current axis by 20%
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.7, box.height])
@@ -176,7 +240,7 @@ if __name__ == '__main__':
     # Create result folder
     result_folder = create_results_folder(path_results="evaluation_results")
     # Compute performance analysis
-    timing_results = compute_performance_analysis(path_results=result_folder)
+    timing_results, equality_check, gas_estimates = compute_performance_analysis(path_results=result_folder)
     # Plot results
     plot_performance_analysis_results(timing_results, path_results=result_folder)
     # Load results and plot them
