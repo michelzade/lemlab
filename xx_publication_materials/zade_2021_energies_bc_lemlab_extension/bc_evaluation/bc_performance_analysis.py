@@ -37,7 +37,7 @@ def compute_performance_analysis(path_results=None):
 
     df_timing_results = pd.DataFrame(index=n_positions_range)
     df_equality_check = pd.DataFrame(index=n_positions_range)
-    df_gas_estimates = pd.DataFrame(index=n_positions_range)
+    df_gas_consumption = pd.DataFrame(index=n_positions_range)
 
     print(f"Setup complete.")
     # Loop through all position samples and execute market clearing
@@ -70,7 +70,7 @@ def compute_performance_analysis(path_results=None):
             db_obj.post_positions(positions)
             t_post_positions_end_db = time.time()
             t_post_positions_db = t_post_positions_end_db - t_post_positions_start_db
-            df_timing_results.loc[n_positions, "t_post_positions_db"] = t_post_positions_db
+            df_timing_results.loc[n_positions, "post_positions_db"] = t_post_positions_db
             # Clear market ex ante ###
             t_clear_market_start_db = time.time()
             clearing_ex_ante.market_clearing(db_obj=db_obj, config_lem=config["lem"], config_retailer=config_retailer,
@@ -78,7 +78,7 @@ def compute_performance_analysis(path_results=None):
                                              rounding_method=False)
             t_clear_market_end_db = time.time()
             t_clear_market_db = t_clear_market_end_db - t_clear_market_start_db
-            df_timing_results.loc[n_positions, "t_clear_market_db"] = t_clear_market_db
+            df_timing_results.loc[n_positions, "clear_market_db"] = t_clear_market_db
             # Simulate meter readings from market results with random errors for settlement
             simulated_meter_readings_delta, ts_delivery_list = test_utils.simulate_meter_readings_from_market_results(
                 db_obj=db_obj, rand_percent_var=15)
@@ -87,17 +87,17 @@ def compute_performance_analysis(path_results=None):
             db_obj.log_readings_meter_delta(simulated_meter_readings_delta)
             t_log_meter_readings_end_db = time.time()
             t_log_meter_readings_db = t_log_meter_readings_end_db - t_log_meter_readings_start_db
-            df_timing_results.loc[n_positions, "t_log_meter_readings_db"] = t_log_meter_readings_db
+            df_timing_results.loc[n_positions, "log_meter_readings_db"] = t_log_meter_readings_db
             # Settle market ###
             t_settle_market_start_db = time.time()
             test_utils.settle_market_db(config=config, db_obj=db_obj, ts_delivery_list=ts_delivery_list,
                                         path_sim=sim_path)
             t_settle_market_end_db = time.time()
             t_settle_market_db = t_settle_market_end_db - t_settle_market_start_db
-            df_timing_results.loc[n_positions, "t_settle_market_db"] = t_settle_market_db
+            df_timing_results.loc[n_positions, "settle_market_db"] = t_settle_market_db
             # Full computation time ###
             t_full_market_db = t_post_positions_db + t_clear_market_db + t_log_meter_readings_db + t_settle_market_db
-            df_timing_results.loc[n_positions, "t_full_market_db"] = t_full_market_db
+            df_timing_results.loc[n_positions, "full_market_db"] = t_full_market_db
             print(f"Central LEM successfully cleared {n_positions} positions.")
         except Exception as e:
             print(e)
@@ -111,33 +111,37 @@ def compute_performance_analysis(path_results=None):
             # convert energy qualities from string to int
             positions = test_utils._convert_qualities_to_int(db_obj, positions, config['lem']['types_quality'])
             t_post_positions_start_bc = time.time()
-            bc_obj_clearing_ex_ante.push_all_positions(positions, temporary=True, permanent=False)
+            _, df_gas_consumption.loc[n_positions, "push_positions"] = bc_obj_clearing_ex_ante.push_all_positions(
+                positions, temporary=True, permanent=False)
             t_post_positions_end_bc = time.time()
             t_post_positions_bc = t_post_positions_end_bc - t_post_positions_start_bc
-            df_timing_results.loc[n_positions, "t_post_positions_bc"] = t_post_positions_bc
+            df_timing_results.loc[n_positions, "post_positions_bc"] = t_post_positions_bc
             # Clear market ex ante ###
             t_clear_market_start_bc = time.time()
-            bc_obj_clearing_ex_ante.market_clearing_ex_ante(config["lem"], config_retailer=config_retailer,
-                                                            t_override=t_override, shuffle=shuffle, verbose=verbose)
+            df_gas_consumption.loc[n_positions, "clear_market"] = bc_obj_clearing_ex_ante.market_clearing_ex_ante(
+                config["lem"], config_retailer=config_retailer,
+                t_override=t_override, shuffle=shuffle, verbose=verbose)
             t_clear_market_end_bc = time.time()
             t_clear_market_bc = t_clear_market_end_bc - t_clear_market_start_bc
-            df_timing_results.loc[n_positions, "t_clear_market_bc"] = t_clear_market_bc
+            df_timing_results.loc[n_positions, "clear_market_bc"] = t_clear_market_bc
             # Log meter readings to LEM ###
             t_log_meter_readings_start_bc = time.time()
-            bc_obj_settlement.log_meter_readings_delta(simulated_meter_readings_delta)
+            _, df_gas_consumption.loc[n_positions, "log_meter_readings"] = bc_obj_settlement.log_meter_readings_delta(
+                simulated_meter_readings_delta)
             t_log_meter_readings_end_bc = time.time()
             t_log_meter_readings_bc = t_log_meter_readings_end_bc - t_log_meter_readings_start_bc
-            df_timing_results.loc[n_positions, "t_log_meter_readings_bc"] = t_log_meter_readings_bc
+            df_timing_results.loc[n_positions, "log_meter_readings_bc"] = t_log_meter_readings_bc
             # Settle market ###
             t_settle_market_start_bc = time.time()
-            test_utils.settle_market_bc(config=config, bc_obj_settlement=bc_obj_settlement,
-                                        ts_delivery_list=ts_delivery_list)
+            df_gas_consumption.loc[n_positions, "settle_market"] = test_utils.settle_market_bc(config=config,
+                                                                                               bc_obj_settlement=bc_obj_settlement,
+                                                                                               ts_delivery_list=ts_delivery_list)
             t_settle_market_end_bc = time.time()
             t_settle_market_bc = t_settle_market_end_bc - t_settle_market_start_bc
-            df_timing_results.loc[n_positions, "t_settle_market_bc"] = t_settle_market_bc
+            df_timing_results.loc[n_positions, "settle_market_bc"] = t_settle_market_bc
             # Full computation time ###
             t_full_market_bc = t_post_positions_bc + t_clear_market_bc + t_log_meter_readings_bc + t_settle_market_bc
-            df_timing_results.loc[n_positions, "t_full_market_bc"] = t_full_market_bc
+            df_timing_results.loc[n_positions, "full_market_bc"] = t_full_market_bc
             print(f"Blockchain LEM successfully cleared {n_positions} positions.")
         except Exception as e:
             print(e)
@@ -200,24 +204,29 @@ def compute_performance_analysis(path_results=None):
             df_equality_check.loc[n_positions, "data_equal"] = False
 
         # Plot results after each iteration
-        plot_performance_analysis_results(df_timing_results, path_results=path_results)
+        plot_performance_analysis_results(df_timing_results, path_results=path_results, data_type="timing_results")
 
     if df_timing_results.empty:
         print(f"No results were computed.")
     else:
-        plot_performance_analysis_results(df_timing_results, path_results=path_results)
+        plot_performance_analysis_results(df_timing_results, path_results=path_results, data_type="timing_results")
         df_timing_results.to_csv(f"{path_results}/timing_results.csv")
 
-    return df_timing_results, df_equality_check, df_gas_estimates
+    return df_timing_results, df_equality_check, df_gas_consumption
 
 
-def plot_performance_analysis_results(results, path_results=None):
+def plot_performance_analysis_results(results, path_results=None, data_type=None):
     fig = plt.figure()
     ax = plt.subplot(111)
     for column in results.columns:
-        ax.plot(results.loc[:, column], marker="x", label=column[2:].replace("_", " "))
+        ax.plot(results.loc[:, column], marker="x", label=column.replace("_", " "))
     ax.grid()
-    ax.set_ylabel("Computation time in s")
+    if data_type == "timing_results":
+        ax.set_ylabel("Computation time in s")
+    elif data_type == "gas_consumption":
+        ax.set_ylabel("Gas consumption")
+    else:
+        ax.set_ylabel("Unknown data type")
     ax.set_xlabel("Number of inserted buy and ask bids")
     # Shrink current axis by 20%
     box = ax.get_position()
@@ -225,7 +234,7 @@ def plot_performance_analysis_results(results, path_results=None):
     # Put a legend to the right of the current axis
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)
     if path_results is not None:
-        fig.savefig(f"{path_results}/performance_analysis.svg")
+        fig.savefig(f"{path_results}/{data_type}.svg")
     plt.show()
 
 
@@ -240,9 +249,10 @@ if __name__ == '__main__':
     # Create result folder
     result_folder = create_results_folder(path_results="evaluation_results")
     # Compute performance analysis
-    timing_results, equality_check, gas_estimates = compute_performance_analysis(path_results=result_folder)
+    timing_results, equality_check, gas_consumption = compute_performance_analysis(path_results=result_folder)
     # Plot results
-    plot_performance_analysis_results(timing_results, path_results=result_folder)
+    plot_performance_analysis_results(timing_results, path_results=result_folder, data_type="timing_results")
+    plot_performance_analysis_results(gas_consumption, path_results=result_folder, data_type="gas_consumption")
     # Load results and plot them
     timing_results_read = pd.read_csv(f"{result_folder}/timing_results.csv", index_col=0)
-    plot_performance_analysis_results(timing_results_read)
+    plot_performance_analysis_results(timing_results_read, data_type="timing_results")

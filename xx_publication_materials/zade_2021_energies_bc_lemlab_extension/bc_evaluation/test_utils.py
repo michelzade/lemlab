@@ -295,21 +295,27 @@ def settle_market_db(config, db_obj, ts_delivery_list, path_sim):
 
 
 def settle_market_bc(config, bc_obj_settlement, ts_delivery_list):
+    gas_consumption = 0
     # Calculate/determine balancing energies
-    bc_obj_settlement.determine_balancing_energy(ts_delivery_list)
+    _, partial_gas_consumption = bc_obj_settlement.determine_balancing_energy(ts_delivery_list)
+    gas_consumption += partial_gas_consumption
 
     # Set settlement prices in db and bc
-    bc_obj_settlement.set_prices_settlement(ts_delivery_list)
+    _, partial_gas_consumption = bc_obj_settlement.set_prices_settlement(ts_delivery_list)
+    gas_consumption += partial_gas_consumption
 
     # Update balances according to balancing energies db and bc
     ts_now = round(time.time())
     id_retailer = "retailer01"
-    bc_obj_settlement.update_balance_balancing_costs(list_ts_delivery=ts_delivery_list,
+    _, partial_gas_consumption = bc_obj_settlement.update_balance_balancing_costs(list_ts_delivery=ts_delivery_list,
                                                      ts_now=ts_now, supplier_id=id_retailer)
-    # Update balances with levies on bc
-    bc_obj_settlement.update_balance_levies(list_ts_delivery=ts_delivery_list, ts_now=ts_now, id_retailer=id_retailer)
+    gas_consumption += partial_gas_consumption
 
-    return config, bc_obj_settlement
+    # Update balances with levies on bc
+    _, partial_gas_consumption = bc_obj_settlement.update_balance_levies(list_ts_delivery=ts_delivery_list, ts_now=ts_now, id_retailer=id_retailer)
+    gas_consumption += partial_gas_consumption
+
+    return gas_consumption
 
 
 # Create random user ids

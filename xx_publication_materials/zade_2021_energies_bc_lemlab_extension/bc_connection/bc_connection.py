@@ -293,12 +293,14 @@ class BlockchainConnection:
         return tx_hash
 
     def push_all_positions(self, df_positions, temporary=True, permanent=False):
+        gas_consumption = 0
         for _, row in df_positions.iterrows():
             tx_hash = self.push_position(row, temp=temporary, permament=permanent)
+            gas_consumption += self.web3_eth.get_transaction(tx_hash).gas
 
         self.wait_for_transact(tx_hash)
 
-        return tx_hash
+        return tx_hash, gas_consumption
 
     ###################################################
     # Functions for the market clearing of data
@@ -347,13 +349,14 @@ class BlockchainConnection:
         # Check whether clearing for all ts_delivery can be performed in one block or must be split up
         max_n_clearings_per_block = self.find_limit(n_clearings, t_clearing_first, retailer_bids,
                                                     uniform_pricing, discriminative_pricing, t_clearing,
-                                                    gasThreshold=250000000,
+                                                    gasThreshold=1500000000,
                                                     interval_clearing=interval_clearing,
                                                     simulation_test=simulation_test,
                                                     verbose_bc=verbose)
         n_clearings_current = max_n_clearings_per_block
 
         update_balances = False
+        gas_consumption = 0
 
         while n_clearings_done < n_clearings:
             if n_clearings - n_clearings_done <= n_clearings_current:  # last step
@@ -371,6 +374,7 @@ class BlockchainConnection:
                                                          verbose, update_balances,
                                                          simulation_test).transact(
                     {'from': self.coinbase})
+                gas_consumption += self.web3_eth.get_transaction(tx_hash).gas
                 self.wait_for_transact(tx_hash)
                 if verbose:
                     log = self.get_log(tx_hash=tx_hash)
@@ -383,6 +387,7 @@ class BlockchainConnection:
                 n_clearings_current = int(n_clearings_current * 0.75)
                 update_balances = False
 
+        return gas_consumption
         # # Update user balances after clearing
         # self.update_balances_after_clearing_ex_ante()
 
@@ -489,11 +494,13 @@ class BlockchainConnection:
         return tx_hash
 
     def log_meter_readings_delta(self, df_meter_deltas):
+        gas_consumption = 0
         for _, row in df_meter_deltas.iterrows():
             tx_hash = self.log_meter_reading_delta(row)
+            gas_consumption += self.web3_eth.get_transaction(tx_hash).gas
         self.wait_for_transact(tx_hash)
 
-        return tx_hash
+        return tx_hash, gas_consumption
 
     def get_meter_readings_delta(self, return_list=False):
         meter_deltas_list = self.functions.get_meter_readings_delta().call()
@@ -535,7 +542,9 @@ class BlockchainConnection:
     # function to calculate the balancing energy given a list of timesteps for the Settlement contract
     def determine_balancing_energy(self, list_ts_delivery):
         tx_hash = self.functions.determine_balancing_energy(tuple(list_ts_delivery)).transact({'from': self.coinbase})
+        gas_consumption = self.web3_eth.get_transaction(tx_hash).gas
         self.wait_for_transact(tx_hash)
+        return tx_hash, gas_consumption
 
     # function to get the market results, either from the ClearingExAnte contract or the Settlement contract
     # both contracts will return the same results
@@ -549,6 +558,7 @@ class BlockchainConnection:
 
     def set_prices_settlement(self, list_ts_delivery, price_bal_pos=None, price_bal_neg=None,
                               price_lev_pos=None, price_lev_neg=None):
+        gas_consumption = 0
 
         if price_bal_pos is not None:
             assert price_bal_neg is not None, "Error, please input a value for price_bal_neg"
@@ -568,6 +578,8 @@ class BlockchainConnection:
                                                                            tuple(price_bal_neg), tuple(price_lev_pos),
                                                                            tuple(price_lev_neg)).transact(
                     {"from": self.coinbase})
+                gas_consumption += self.web3_eth.get_transaction(tx_hash).gas
+
             else:
                 assert type(price_bal_pos) == float and type(price_bal_neg) == float and type(
                     price_lev_pos) == float and type(price_lev_neg) == float, "Error, all the parameters must be" \
@@ -581,6 +593,8 @@ class BlockchainConnection:
                 tx_hash = self.functions.set_prices_settlement_custom(tuple(list_ts_delivery), price_bal_pos,
                                                                       price_bal_neg, price_lev_pos,
                                                                       price_lev_neg).transact({"from": self.coinbase})
+                gas_consumption += self.web3_eth.get_transaction(tx_hash).gas
+
         else:
             # we set the parameters to their defaults values
             # price_bal_pos = 0.15
@@ -588,8 +602,11 @@ class BlockchainConnection:
             # price_lev_pos = 0
             # price_lev_neg = 0.18
             tx_hash = self.functions.set_prices_settlement(tuple(list_ts_delivery)).transact({"from": self.coinbase})
+            gas_consumption += self.web3_eth.get_transaction(tx_hash).gas
 
         self.wait_for_transact(tx_hash)
+
+        return tx_hash, gas_consumption
 
     def get_prices_settlement(self, ts_delivery=None, return_list=False):
         if ts_delivery is not None:
@@ -609,13 +626,17 @@ class BlockchainConnection:
         tx_hash = self.functions.update_balance_balancing_costs(tuple(list_ts_delivery), ts_now, supplier_id).transact(
             {"from": self.coinbase}
         )
+        gas_consumption = self.web3_eth.get_transaction(tx_hash).gas
         self.wait_for_transact(tx_hash)
+        return tx_hash, gas_consumption
 
     def update_balance_levies(self, list_ts_delivery, ts_now=round(time.time()), id_retailer="retailer01"):
         tx_hash = self.functions.update_balance_levies(tuple(list_ts_delivery), ts_now, id_retailer).transact(
             {"from": self.coinbase}
         )
+        gas_consumption = self.web3_eth.get_transaction(tx_hash).gas
         self.wait_for_transact(tx_hash)
+        return tx_hash, gas_consumption
 
     def get_logs_transactions(self, ts_delivery=None, return_list=False):
         if ts_delivery is not None:
