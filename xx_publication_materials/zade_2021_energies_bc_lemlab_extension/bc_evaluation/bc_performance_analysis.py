@@ -92,7 +92,7 @@ def compute_performance_analysis(path_results=None):
 
     print(f"Setup complete.")
     for sample in range(config["bc_performance_analysis"]["n_samples"]):
-
+        print(f"### Sample No. {sample} ###")
         # Loop through all position samples and execute market clearing
         for n_positions in n_positions_range:
             print(f"Test with {n_positions} positions.")
@@ -152,7 +152,7 @@ def compute_performance_analysis(path_results=None):
                 # Full computation time ###
                 t_full_market_db = t_post_positions_db + t_clear_market_db + t_log_meter_readings_db + t_settle_market_db
                 result_dict["timing"]["db"]["full_market"].loc[sample, n_positions] = t_full_market_db
-                print(f"Central LEM successfully cleared {n_positions} positions.")
+                print(f"Central LEM successfully cleared {n_positions} positions in {t_full_market_db} s.")
             except Exception as e:
                 print(e)
                 result_dict["exception"]["db"][sample] = e
@@ -201,7 +201,7 @@ def compute_performance_analysis(path_results=None):
                 gas_consumption_all = gas_consumption_pp + gas_consumption_cm + gas_consumption_lmr + gas_consumption_sm
                 result_dict["gas_consumption"]["full_market"].loc[sample, n_positions] = gas_consumption_all
                 result_dict["timing"]["bc"]["full_market"].loc[sample, n_positions] = t_full_market_bc
-                print(f"Blockchain LEM successfully cleared {n_positions} positions.")
+                print(f"Blockchain LEM successfully cleared {n_positions} positions in {t_full_market_bc} s.")
             except Exception as e:
                 print(e)
                 result_dict["exception"]["bc"][sample] = e
@@ -274,7 +274,7 @@ def plot_time_complexity_analysis(db_timings, bc_timings, path_results=None):
         y_error = [df.max() - df.mean(), df.mean() - df.min()]
         ax.errorbar(x=df.columns, y=df.mean(), yerr=y_error, marker="x", label="bc: " + key.replace("_", " "))
     ax.grid()
-    # ax.set_yscale("log")
+    ax.set_yscale("log")
     ax.set_ylabel("Computation time in s")
     ax.set_xlabel("Number of inserted buy and ask bids")
     # Shrink current axis by 20%
@@ -307,7 +307,7 @@ def plot_gas_consumption(gas_consumption_dict, path_results=None, data_type=None
 
 
 def create_results_folder(path_results):
-    current_time_str = pd.Timestamp.now().strftime("%Y_%m_%d_%H_%M")
+    current_time_str = pd.Timestamp.now().strftime("%Y_%m_%d_%H_%M_%S")
     os.mkdir(f"{path_results}/{current_time_str}")
 
     return f"{path_results}/{current_time_str}"
