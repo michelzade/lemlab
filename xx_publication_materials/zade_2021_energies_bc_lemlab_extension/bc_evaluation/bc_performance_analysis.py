@@ -35,198 +35,266 @@ def compute_performance_analysis(path_results=None):
                                   config["bc_performance_analysis"]["n_positions"]["max"],
                                   config["bc_performance_analysis"]["n_positions"]["increment"])
 
-    df_timing_results = pd.DataFrame(index=n_positions_range)
-    df_equality_check = pd.DataFrame(index=n_positions_range)
-    df_gas_consumption = pd.DataFrame(index=n_positions_range)
+    # Result dictionary
+    result_dict = dict()
+    result_dict["timing"] = dict()
+    result_dict["exception"] = dict()
+    result_dict["exception"]["db"] = dict()
+    result_dict["exception"]["bc"] = dict()
+    result_dict["timing"]["db"] = dict()
+    result_dict["timing"]["bc"] = dict()
+    result_dict["timing"]["db"]["post_positions"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["timing"]["db"]["clear_market"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["timing"]["db"]["log_meter_readings"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["timing"]["db"]["settle_market"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["timing"]["db"]["full_market"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["timing"]["bc"]["post_positions"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["timing"]["bc"]["clear_market"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["timing"]["bc"]["log_meter_readings"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["timing"]["bc"]["settle_market"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["timing"]["bc"]["full_market"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["gas_consumption"] = dict()
+    result_dict["gas_consumption"]["post_positions"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["gas_consumption"]["clear_market"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["gas_consumption"]["log_meter_readings"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["gas_consumption"]["settle_market"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["gas_consumption"]["full_market"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["equality_check"] = dict()
+    result_dict["equality_check"]["user_info"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["equality_check"]["meter_info"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["equality_check"]["market_results"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["equality_check"]["prices_settlement"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["equality_check"]["transaction_logs"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["equality_check"]["balancing_energy"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
+    result_dict["equality_check"]["meter_readings"] = pd.DataFrame(
+        index=range(config["bc_performance_analysis"]["n_samples"]))
 
     print(f"Setup complete.")
-    # Loop through all position samples and execute market clearing
-    for n_positions in n_positions_range:
-        print(f"Test with {n_positions} positions.")
-        # Reset market tables before each iteration
-        test_utils.reset_dynamic_market_data_tables(db_obj=db_obj, bc_obj_market=bc_obj_clearing_ex_ante,
-                                                    bc_obj_settlement=bc_obj_settlement)
-        # Compute random market positions
-        positions = test_utils.create_random_positions(db_obj=db_obj,
-                                                       config=config,
-                                                       ids_user=ids_meters,
-                                                       n_positions=n_positions,
-                                                       verbose=False)
+    for sample in range(config["bc_performance_analysis"]["n_samples"]):
 
-        # Initialize clearing parameters
-        config_retailer = None
-        t_override = round(time.time())
-        shuffle = False
-        plotting = False
-        verbose = False
-        sim_path = ""
+        # Loop through all position samples and execute market clearing
+        for n_positions in n_positions_range:
+            print(f"Test with {n_positions} positions.")
+            # Reset market tables before each iteration
+            test_utils.reset_dynamic_market_data_tables(db_obj=db_obj, bc_obj_market=bc_obj_clearing_ex_ante,
+                                                        bc_obj_settlement=bc_obj_settlement)
+            # Compute random market positions
+            positions = test_utils.create_random_positions(db_obj=db_obj,
+                                                           config=config,
+                                                           ids_user=ids_meters,
+                                                           n_positions=n_positions,
+                                                           verbose=False)
 
-        #############################
-        # Central database LEM ######
-        #############################
-        try:
-            # Post positions ###
-            t_post_positions_start_db = time.time()
-            db_obj.post_positions(positions)
-            t_post_positions_end_db = time.time()
-            t_post_positions_db = t_post_positions_end_db - t_post_positions_start_db
-            df_timing_results.loc[n_positions, "post_positions_db"] = t_post_positions_db
-            # Clear market ex ante ###
-            t_clear_market_start_db = time.time()
-            clearing_ex_ante.market_clearing(db_obj=db_obj, config_lem=config["lem"], config_retailer=config_retailer,
-                                             t_override=t_override, plotting=plotting, verbose=verbose,
-                                             rounding_method=False)
-            t_clear_market_end_db = time.time()
-            t_clear_market_db = t_clear_market_end_db - t_clear_market_start_db
-            df_timing_results.loc[n_positions, "clear_market_db"] = t_clear_market_db
-            # Simulate meter readings from market results with random errors for settlement
-            simulated_meter_readings_delta, ts_delivery_list = test_utils.simulate_meter_readings_from_market_results(
-                db_obj=db_obj, rand_percent_var=15)
-            # Log meter readings to LEM ###
-            t_log_meter_readings_start_db = time.time()
-            db_obj.log_readings_meter_delta(simulated_meter_readings_delta)
-            t_log_meter_readings_end_db = time.time()
-            t_log_meter_readings_db = t_log_meter_readings_end_db - t_log_meter_readings_start_db
-            df_timing_results.loc[n_positions, "log_meter_readings_db"] = t_log_meter_readings_db
-            # Settle market ###
-            t_settle_market_start_db = time.time()
-            test_utils.settle_market_db(config=config, db_obj=db_obj, ts_delivery_list=ts_delivery_list,
-                                        path_sim=sim_path)
-            t_settle_market_end_db = time.time()
-            t_settle_market_db = t_settle_market_end_db - t_settle_market_start_db
-            df_timing_results.loc[n_positions, "settle_market_db"] = t_settle_market_db
-            # Full computation time ###
-            t_full_market_db = t_post_positions_db + t_clear_market_db + t_log_meter_readings_db + t_settle_market_db
-            df_timing_results.loc[n_positions, "full_market_db"] = t_full_market_db
-            print(f"Central LEM successfully cleared {n_positions} positions.")
-        except Exception as e:
-            print(e)
-            df_timing_results.loc[n_positions, "db_exception"] = e
-            break
+            # Initialize clearing parameters
+            config_retailer = None
+            t_override = round(time.time())
+            shuffle = False
+            plotting = False
+            verbose = False
+            sim_path = ""
 
-        #############################
-        # Blockchain LEM ############
-        #############################
-        try:
-            # convert energy qualities from string to int
-            positions = test_utils._convert_qualities_to_int(db_obj, positions, config['lem']['types_quality'])
-            t_post_positions_start_bc = time.time()
-            _, df_gas_consumption.loc[n_positions, "push_positions"] = bc_obj_clearing_ex_ante.push_all_positions(
-                positions, temporary=True, permanent=False)
-            t_post_positions_end_bc = time.time()
-            t_post_positions_bc = t_post_positions_end_bc - t_post_positions_start_bc
-            df_timing_results.loc[n_positions, "post_positions_bc"] = t_post_positions_bc
-            # Clear market ex ante ###
-            t_clear_market_start_bc = time.time()
-            df_gas_consumption.loc[n_positions, "clear_market"] = bc_obj_clearing_ex_ante.market_clearing_ex_ante(
-                config["lem"], config_retailer=config_retailer,
-                t_override=t_override, shuffle=shuffle, verbose=verbose)
-            t_clear_market_end_bc = time.time()
-            t_clear_market_bc = t_clear_market_end_bc - t_clear_market_start_bc
-            df_timing_results.loc[n_positions, "clear_market_bc"] = t_clear_market_bc
-            # Log meter readings to LEM ###
-            t_log_meter_readings_start_bc = time.time()
-            _, df_gas_consumption.loc[n_positions, "log_meter_readings"] = bc_obj_settlement.log_meter_readings_delta(
-                simulated_meter_readings_delta)
-            t_log_meter_readings_end_bc = time.time()
-            t_log_meter_readings_bc = t_log_meter_readings_end_bc - t_log_meter_readings_start_bc
-            df_timing_results.loc[n_positions, "log_meter_readings_bc"] = t_log_meter_readings_bc
-            # Settle market ###
-            t_settle_market_start_bc = time.time()
-            df_gas_consumption.loc[n_positions, "settle_market"] = test_utils.settle_market_bc(config=config,
-                                                                                               bc_obj_settlement=bc_obj_settlement,
-                                                                                               ts_delivery_list=ts_delivery_list)
-            t_settle_market_end_bc = time.time()
-            t_settle_market_bc = t_settle_market_end_bc - t_settle_market_start_bc
-            df_timing_results.loc[n_positions, "settle_market_bc"] = t_settle_market_bc
-            # Full computation time ###
-            t_full_market_bc = t_post_positions_bc + t_clear_market_bc + t_log_meter_readings_bc + t_settle_market_bc
-            df_timing_results.loc[n_positions, "full_market_bc"] = t_full_market_bc
-            print(f"Blockchain LEM successfully cleared {n_positions} positions.")
-        except Exception as e:
-            print(e)
-            df_timing_results.loc[n_positions, "bc_exception"] = e
-            break
+            #############################
+            # Central database LEM ######
+            #############################
+            try:
+                # Post positions ###
+                t_post_positions_start_db = time.time()
+                db_obj.post_positions(positions)
+                t_post_positions_end_db = time.time()
+                t_post_positions_db = t_post_positions_end_db - t_post_positions_start_db
+                result_dict["timing"]["db"]["post_positions"].loc[sample, n_positions] = t_post_positions_db
+                # Clear market ex ante ###
+                t_clear_market_start_db = time.time()
+                clearing_ex_ante.market_clearing(db_obj=db_obj, config_lem=config["lem"],
+                                                 config_retailer=config_retailer,
+                                                 t_override=t_override, plotting=plotting, verbose=verbose,
+                                                 rounding_method=False)
+                t_clear_market_end_db = time.time()
+                t_clear_market_db = t_clear_market_end_db - t_clear_market_start_db
+                result_dict["timing"]["db"]["clear_market"].loc[sample, n_positions] = t_clear_market_db
+                # Simulate meter readings from market results with random errors for settlement
+                simulated_meter_readings_delta, ts_delivery_list = test_utils.simulate_meter_readings_from_market_results(
+                    db_obj=db_obj, rand_percent_var=15)
+                # Log meter readings to LEM ###
+                t_log_meter_readings_start_db = time.time()
+                db_obj.log_readings_meter_delta(simulated_meter_readings_delta)
+                t_log_meter_readings_end_db = time.time()
+                t_log_meter_readings_db = t_log_meter_readings_end_db - t_log_meter_readings_start_db
+                result_dict["timing"]["db"]["log_meter_readings"].loc[sample, n_positions] = t_log_meter_readings_db
+                # Settle market ###
+                t_settle_market_start_db = time.time()
+                test_utils.settle_market_db(config=config, db_obj=db_obj, ts_delivery_list=ts_delivery_list,
+                                            path_sim=sim_path)
+                t_settle_market_end_db = time.time()
+                t_settle_market_db = t_settle_market_end_db - t_settle_market_start_db
+                result_dict["timing"]["db"]["settle_market"].loc[sample, n_positions] = t_settle_market_db
+                # Full computation time ###
+                t_full_market_db = t_post_positions_db + t_clear_market_db + t_log_meter_readings_db + t_settle_market_db
+                result_dict["timing"]["db"]["full_market"].loc[sample, n_positions] = t_full_market_db
+                print(f"Central LEM successfully cleared {n_positions} positions.")
+            except Exception as e:
+                print(e)
+                result_dict["exception"]["db"][sample] = e
+                break
 
-        # Check equality of db and bc entries
-        try:
-            test_user_info(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante)
-            df_equality_check.loc[n_positions, "user_info_equal"] = True
-        except AssertionError as a:
-            df_equality_check.loc[n_positions, "user_info_equal"] = False
-            pass
+            #############################
+            # Blockchain LEM ############
+            #############################
+            try:
+                # convert energy qualities from string to int
+                positions = test_utils._convert_qualities_to_int(db_obj, positions, config['lem']['types_quality'])
+                t_post_positions_start_bc = time.time()
+                _, gas_consumption_pp = bc_obj_clearing_ex_ante.push_all_positions(
+                    positions, temporary=True, permanent=False)
+                result_dict["gas_consumption"]["post_positions"].loc[sample, n_positions] = gas_consumption_pp
+                t_post_positions_end_bc = time.time()
+                t_post_positions_bc = t_post_positions_end_bc - t_post_positions_start_bc
+                result_dict["timing"]["bc"]["post_positions"].loc[sample, n_positions] = t_post_positions_bc
+                # Clear market ex ante ###
+                t_clear_market_start_bc = time.time()
+                gas_consumption_cm = bc_obj_clearing_ex_ante.market_clearing_ex_ante(
+                    config["lem"], config_retailer=config_retailer,
+                    t_override=t_override, shuffle=shuffle, verbose=verbose)
+                result_dict["gas_consumption"]["clear_market"].loc[sample, n_positions] = gas_consumption_cm
+                t_clear_market_end_bc = time.time()
+                t_clear_market_bc = t_clear_market_end_bc - t_clear_market_start_bc
+                result_dict["timing"]["bc"]["clear_market"].loc[sample, n_positions] = t_clear_market_bc
+                # Log meter readings to LEM ###
+                t_log_meter_readings_start_bc = time.time()
+                _, gas_consumption_lmr = bc_obj_settlement.log_meter_readings_delta(simulated_meter_readings_delta)
+                result_dict["gas_consumption"]["log_meter_readings"].loc[sample, n_positions] = gas_consumption_lmr
+                t_log_meter_readings_end_bc = time.time()
+                t_log_meter_readings_bc = t_log_meter_readings_end_bc - t_log_meter_readings_start_bc
+                result_dict["timing"]["bc"]["log_meter_readings"].loc[sample, n_positions] = t_log_meter_readings_bc
+                # Settle market ###
+                t_settle_market_start_bc = time.time()
+                gas_consumption_sm = test_utils.settle_market_bc(config=config,
+                                                                 bc_obj_settlement=bc_obj_settlement,
+                                                                 ts_delivery_list=ts_delivery_list)
+                result_dict["gas_consumption"]["settle_market"].loc[sample, n_positions] = gas_consumption_sm
+                t_settle_market_end_bc = time.time()
+                t_settle_market_bc = t_settle_market_end_bc - t_settle_market_start_bc
+                result_dict["timing"]["bc"]["settle_market"].loc[sample, n_positions] = t_settle_market_bc
+                # Full market clearing ###
+                t_full_market_bc = t_post_positions_bc + t_clear_market_bc + t_log_meter_readings_bc + t_settle_market_bc
+                gas_consumption_all = gas_consumption_pp + gas_consumption_cm + gas_consumption_lmr + gas_consumption_sm
+                result_dict["gas_consumption"]["full_market"].loc[sample, n_positions] = gas_consumption_all
+                result_dict["timing"]["bc"]["full_market"].loc[sample, n_positions] = t_full_market_bc
+                print(f"Blockchain LEM successfully cleared {n_positions} positions.")
+            except Exception as e:
+                print(e)
+                result_dict["exception"]["bc"][sample] = e
+                break
 
-        try:
-            test_meter_info(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante)
-            df_equality_check.loc[n_positions, "meter_info_equal"] = True
-        except AssertionError:
-            df_equality_check.loc[n_positions, "meter_info_equal"] = False
-            pass
+            # Check equality of db and bc entries
+            try:
+                test_user_info(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante)
+                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = True
+            except AssertionError as a:
+                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = False
+                pass
 
-        try:
-            test_clearing_results_ex_ante(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante)
-            df_equality_check.loc[n_positions, "market_results_equal"] = True
-        except AssertionError:
-            df_equality_check.loc[n_positions, "market_results_equal"] = False
-            pass
+            try:
+                test_meter_info(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante)
+                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = True
+            except AssertionError:
+                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = False
+                pass
 
-        try:
-            test_meter_readings(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
-            df_equality_check.loc[n_positions, "meter_readings_equal"] = True
-        except AssertionError:
-            df_equality_check.loc[n_positions, "meter_readings_equal"] = False
-            pass
+            try:
+                test_clearing_results_ex_ante(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante)
+                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = True
+            except AssertionError:
+                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = False
+                pass
 
-        try:
-            test_prices_settlement(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
-            df_equality_check.loc[n_positions, "prices_settlement_equal"] = True
-        except AssertionError:
-            df_equality_check.loc[n_positions, "prices_settlement_equal"] = False
-            pass
+            try:
+                test_meter_readings(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
+                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = True
+            except AssertionError:
+                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = False
+                pass
 
-        try:
-            test_balancing_energy(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
-            df_equality_check.loc[n_positions, "balancing_energy_equal"] = True
-        except AssertionError:
-            df_equality_check.loc[n_positions, "balancing_energy_equal"] = False
-            pass
+            try:
+                test_prices_settlement(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
+                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = True
+            except AssertionError:
+                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = False
+                pass
 
-        try:
-            test_transaction_logs(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
-            df_equality_check.loc[n_positions, "transaction_logs_equal"] = True
-        except AssertionError:
-            df_equality_check.loc[n_positions, "transaction_logs_equal"] = False
-            pass
+            try:
+                test_balancing_energy(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
+                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = True
+            except AssertionError:
+                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = False
+                pass
 
-        if (df_equality_check.loc[n_positions, :] == True).all():
-            df_equality_check.loc[n_positions, "data_equal"] = True
-        else:
-            df_equality_check.loc[n_positions, "data_equal"] = False
+            try:
+                test_transaction_logs(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
+                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = True
+            except AssertionError:
+                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = False
+                pass
 
-        # Plot results after each iteration
-        plot_performance_analysis_results(df_timing_results, path_results=path_results, data_type="timing_results")
+            # Plot results after each iteration
+            plot_time_complexity_analysis(result_dict["timing"]["db"], result_dict["timing"]["bc"],
+                                          path_results=path_results)
 
-    if df_timing_results.empty:
-        print(f"No results were computed.")
-    else:
-        plot_performance_analysis_results(df_timing_results, path_results=path_results, data_type="timing_results")
-        df_timing_results.to_csv(f"{path_results}/timing_results.csv")
-
-    return df_timing_results, df_equality_check, df_gas_consumption
+    return result_dict
 
 
-def plot_performance_analysis_results(results, path_results=None, data_type=None):
+def plot_time_complexity_analysis(db_timings, bc_timings, path_results=None):
     fig = plt.figure()
     ax = plt.subplot(111)
-    for column in results.columns:
-        ax.plot(results.loc[:, column], marker="x", label=column.replace("_", " "))
+    for key, df in db_timings.items():
+        y_error = [df.max() - df.mean(), df.mean() - df.min()]
+        ax.errorbar(x=df.columns, y=df.mean(), yerr=y_error, marker="x", label="db: " + key.replace("_", " "))
+    for key, df in bc_timings.items():
+        y_error = [df.max() - df.mean(), df.mean() - df.min()]
+        ax.errorbar(x=df.columns, y=df.mean(), yerr=y_error, marker="x", label="bc: " + key.replace("_", " "))
     ax.grid()
-    if data_type == "timing_results":
-        ax.set_ylabel("Computation time in s")
-    elif data_type == "gas_consumption":
-        ax.set_ylabel("Gas consumption")
-    else:
-        ax.set_ylabel("Unknown data type")
+    # ax.set_yscale("log")
+    ax.set_ylabel("Computation time in s")
+    ax.set_xlabel("Number of inserted buy and ask bids")
+    # Shrink current axis by 20%
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.7, box.height])
+    # Put a legend to the right of the current axis
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)
+    if path_results is not None:
+        fig.savefig(f"{path_results}/timing_results.svg")
+    plt.show()
+
+
+def plot_gas_consumption(gas_consumption_dict, path_results=None, data_type=None):
+    fig = plt.figure()
+    ax = plt.subplot(111)
+    for key, df in gas_consumption_dict.items():
+        y_error = [df.max() - df.mean(), df.mean() - df.min()]
+        ax.errorbar(x=df.columns, y=df.mean(), yerr=y_error, marker="x", label=key.replace("_", " "))
+    ax.grid()
+    ax.set_ylabel("Gas consumption")
     ax.set_xlabel("Number of inserted buy and ask bids")
     # Shrink current axis by 20%
     box = ax.get_position()
@@ -245,14 +313,60 @@ def create_results_folder(path_results):
     return f"{path_results}/{current_time_str}"
 
 
+def save_results(result_dict, path_results):
+    os.mkdir(f"{path_results}/timing")
+    os.mkdir(f"{path_results}/timing/db")
+    os.mkdir(f"{path_results}/timing/bc")
+    os.mkdir(f"{path_results}/gas_consumption")
+    os.mkdir(f"{path_results}/equality_check")
+
+    for key, df in result_dict["timing"]["db"].items():
+        df.to_csv(f"{path_results}/timing/db/{key}.csv")
+    for key, df in result_dict["timing"]["bc"].items():
+        df.to_csv(f"{path_results}/timing/bc/{key}.csv")
+    for key, df in result_dict["gas_consumption"].items():
+        df.to_csv(f"{path_results}/gas_consumption/{key}.csv")
+    for key, df in result_dict["equality_check"].items():
+        df.to_csv(f"{path_results}/equality_check/{key}.csv")
+
+
+def load_results(path_result_folder):
+    result_dict = dict()
+    result_dict["equality_check"] = dict()
+    for file_name in os.listdir(f"{path_result_folder}/equality_check"):
+        result_dict["equality_check"][file_name[:-4]] = pd.read_csv(f"{path_result_folder}/equality_check/{file_name}",
+                                                                    index_col=0)
+    result_dict["timing"] = dict()
+    result_dict["timing"]["db"] = dict()
+    result_dict["timing"]["bc"] = dict()
+    for file_name in os.listdir(f"{path_result_folder}/timing/db"):
+        result_dict["timing"]["db"][file_name[:-4]] = pd.read_csv(f"{path_result_folder}/timing/db/{file_name}",
+                                                                  index_col=0)
+    for file_name in os.listdir(f"{path_result_folder}/timing/bc"):
+        result_dict["timing"]["bc"][file_name[:-4]] = pd.read_csv(f"{path_result_folder}/timing/bc/{file_name}",
+                                                                  index_col=0)
+    result_dict["gas_consumption"] = dict()
+    for file_name in os.listdir(f"{path_result_folder}/gas_consumption"):
+        result_dict["gas_consumption"][file_name[:-4]] = pd.read_csv(
+            f"{path_result_folder}/gas_consumption/{file_name}",
+            index_col=0)
+
+    return result_dict
+
+
 if __name__ == '__main__':
     # Create result folder
-    result_folder = create_results_folder(path_results="evaluation_results")
+    path_result_folder = create_results_folder(path_results="evaluation_results")
     # Compute performance analysis
-    timing_results, equality_check, gas_consumption = compute_performance_analysis(path_results=result_folder)
+    results = compute_performance_analysis(path_results=path_result_folder)
+    # Save results to files
+    save_results(results, path_result_folder)
+    # Load data from previous analysis
+    results = load_results(path_result_folder=path_result_folder)
     # Plot results
-    plot_performance_analysis_results(timing_results, path_results=result_folder, data_type="timing_results")
-    plot_performance_analysis_results(gas_consumption, path_results=result_folder, data_type="gas_consumption")
-    # Load results and plot them
-    timing_results_read = pd.read_csv(f"{result_folder}/timing_results.csv", index_col=0)
-    plot_performance_analysis_results(timing_results_read, data_type="timing_results")
+    plot_time_complexity_analysis(results["timing"]["db"], results["timing"]["bc"], path_results=path_result_folder)
+    plot_gas_consumption(results["gas_consumption"], path_results=path_result_folder)
+
+    # # Load results and plot them
+    # results_from_file = pd.read_csv(f"{path_result_folder}/timing_results.csv", index_col=0)
+    # plot_time_complexity_analysis(results["timing"]["db"], results["timing"]["bc"], path_results=path_result_folder)
