@@ -258,36 +258,92 @@ def compute_performance_analysis(path_results=None):
                 pass
 
             # Plot results after each iteration
-            plot_time_complexity_analysis(result_dict["timing"]["db"], result_dict["timing"]["bc"],
+            plot_time_complexity_analysis(db_timings=result_dict["timing"]["db"],
+                                          bc_timings=result_dict["timing"]["bc"],
                                           path_results=path_results)
+            plot_time_complexity_distributions(db_timings=result_dict["timing"]["db"],
+                                               bc_timings=result_dict["timing"]["bc"],
+                                               path_results=path_result_folder)
+            plot_gas_consumption(result_dict["gas_consumption"], path_results=path_results)
 
     return result_dict
 
 
-def plot_time_complexity_analysis(db_timings, bc_timings, path_results=None):
+def plot_time_complexity_analysis(db_timings, bc_timings, path_results=None, only_full_market=False, reference=None):
+    reference_value = 1
     fig = plt.figure()
     ax = plt.subplot(111)
-    for key, df in db_timings.items():
+    if only_full_market:
+        key = "full_market"
+        df = db_timings["full_market"]
+        if reference:
+            reference_value = df.iloc[:, 0].mean()
         y_error = [df.max() - df.mean(), df.mean() - df.min()]
-        ax.errorbar(x=df.columns, y=df.mean(), yerr=y_error, marker="x", label="db: " + key.replace("_", " "))
-    for key, df in bc_timings.items():
+        ax.errorbar(x=df.columns, y=df.mean() / reference_value, yerr=[e / reference_value for e in y_error],
+                    marker="x",
+                    label="db: " + key.replace("_", " "))
+        df = bc_timings["full_market"]
         y_error = [df.max() - df.mean(), df.mean() - df.min()]
-        ax.errorbar(x=df.columns, y=df.mean(), yerr=y_error, marker="x", label="bc: " + key.replace("_", " "))
+        ax.errorbar(x=df.columns, y=df.mean() / reference_value, yerr=[e / reference_value for e in y_error],
+                    marker="x",
+                    label="bc: " + key.replace("_", " "))
+    else:
+        if reference:
+            reference_value = db_timings["post_positions"].iloc[:, 0].mean()
+        for key, df in db_timings.items():
+            y_error = [df.max() - df.mean(), df.mean() - df.min()]
+            ax.errorbar(x=df.columns, y=df.mean() / reference_value, yerr=[e / reference_value for e in y_error],
+                        marker="x", label="db: " + key.replace("_", " "))
+        for key, df in bc_timings.items():
+            y_error = [df.max() - df.mean(), df.mean() - df.min()]
+            ax.errorbar(x=df.columns, y=df.mean() / reference_value, yerr=[e / reference_value for e in y_error],
+                        marker="x", label="bc: " + key.replace("_", " "))
     ax.grid()
     ax.set_yscale("log")
-    ax.set_ylabel("Computation time in s")
+    ax.set_ylabel("Computational effort")
     ax.set_xlabel("Number of inserted buy and ask bids")
     # Shrink current axis by 20%
     box = ax.get_position()
-    ax.set_position([box.x0, box.y0, box.width * 0.7, box.height])
+    ax.set_position([box.x0, box.y0, box.width, box.height])
     # Put a legend to the right of the current axis
-    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)
+    ax.legend(loc='center left', bbox_to_anchor=(0.15, 1.05), frameon=False, ncol=2)
     if path_results is not None:
         fig.savefig(f"{path_results}/timing_results.svg")
     plt.show()
 
 
-def plot_gas_consumption(gas_consumption_dict, path_results=None, data_type=None):
+def plot_time_complexity_distributions(db_timings, bc_timings, path_results=None):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    norm = db_timings["full_market"].mean() / 100
+    l1 = ax1.stackplot(db_timings["full_market"].columns,
+                       db_timings["post_positions"].mean() / norm,
+                       db_timings["clear_market"].mean() / norm,
+                       db_timings["log_meter_readings"].mean() / norm,
+                       db_timings["settle_market"].mean() / norm,
+                       labels=["post_positions", "clear_market", "log_meter_readings", "settle_market"]
+                       )
+    ax1.set_ylabel("Share of computation effort in %")
+    ax1.set_xlabel("Number of inserted buy and ask bids")
+    ax1.set_title("Central database LEM")
+
+    norm = bc_timings["full_market"].mean() / 100
+    l2 = ax2.stackplot(bc_timings["full_market"].columns,
+                       bc_timings["post_positions"].mean() / norm,
+                       bc_timings["clear_market"].mean() / norm,
+                       bc_timings["log_meter_readings"].mean() / norm,
+                       bc_timings["settle_market"].mean() / norm
+                       )
+    ax2.set_xlabel("Number of inserted buy and ask bids")
+    ax2.set_title("Blockchain LEM")
+    fig.legend([l1], labels=["post_positions", "clear_market", "log_meter_readings", "settle_market"],
+               loc="center right")
+    plt.subplots_adjust(right=0.83)
+    if path_results is not None:
+        fig.savefig(f"{path_results}/computation_distribution.svg")
+    plt.show()
+
+
+def plot_gas_consumption(gas_consumption_dict, path_results=None):
     fig = plt.figure()
     ax = plt.subplot(111)
     for key, df in gas_consumption_dict.items():
@@ -302,7 +358,7 @@ def plot_gas_consumption(gas_consumption_dict, path_results=None, data_type=None
     # Put a legend to the right of the current axis
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)
     if path_results is not None:
-        fig.savefig(f"{path_results}/{data_type}.svg")
+        fig.savefig(f"{path_results}/gas_consumption.svg")
     plt.show()
 
 
@@ -364,7 +420,10 @@ if __name__ == '__main__':
     # Load data from previous analysis
     results = load_results(path_result_folder=path_result_folder)
     # Plot results
-    plot_time_complexity_analysis(results["timing"]["db"], results["timing"]["bc"], path_results=path_result_folder)
+    plot_time_complexity_analysis(results["timing"]["db"], results["timing"]["bc"], path_results=path_result_folder,
+                                  only_full_market=True, reference=True)
+    plot_time_complexity_distributions(db_timings=results["timing"]["db"], bc_timings=results["timing"]["bc"],
+                                       path_results=path_result_folder)
     plot_gas_consumption(results["gas_consumption"], path_results=path_result_folder)
 
     # # Load results and plot them
