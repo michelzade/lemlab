@@ -499,9 +499,9 @@ db_connections:
 bc_performance_analysis:
   "n_prosumers": 100                        # number of prosumers on platform
   "n_positions": {"min": 50,
-                  "max": 601,
+                  "max": 551,
                   "increment": 50}          # range of inserted market positions in analysis
   "n_ts_delivery": 1                        # number of time of deliveries to be simulated in positions
-  "max_number_positions_ts_d": 99           # in order to omit collisions this number should be at leas.
+  "max_number_positions_ts_d": 999           # in order to omit collisions this number should be at leas.
   "n_samples": 10                            # number of samples
 
