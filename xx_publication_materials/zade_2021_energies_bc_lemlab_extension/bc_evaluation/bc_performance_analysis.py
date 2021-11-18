@@ -263,8 +263,9 @@ def compute_performance_analysis(path_results=None):
                                           path_results=path_results)
             plot_time_complexity_distributions(db_timings=result_dict["timing"]["db"],
                                                bc_timings=result_dict["timing"]["bc"],
-                                               path_results=path_result_folder)
-            plot_gas_consumption(result_dict["gas_consumption"], path_results=path_results)
+                                               path_results=path_results)
+            plot_gas_consumption(gas_consumption_dict=result_dict["gas_consumption"], path_results=path_results)
+            save_results(result_dict=result_dict, path_results=path_results)
 
     return result_dict
 
@@ -300,7 +301,7 @@ def plot_time_complexity_analysis(db_timings, bc_timings, path_results=None, onl
                         marker="x", label="bc: " + key.replace("_", " "))
     ax.grid()
     ax.set_yscale("log")
-    ax.set_ylabel("Computational effort")
+    ax.set_ylabel("Computational effort in relation to a full market clearing\nwith 50 bids on a central database")
     ax.set_xlabel("Number of inserted buy and ask bids")
     # Shrink current axis by 20%
     box = ax.get_position()
@@ -365,17 +366,17 @@ def plot_gas_consumption(gas_consumption_dict, path_results=None):
 def create_results_folder(path_results):
     current_time_str = pd.Timestamp.now().strftime("%Y_%m_%d_%H_%M_%S")
     os.mkdir(f"{path_results}/{current_time_str}")
+    os.mkdir(f"{path_results}/{current_time_str}/timing")
+    os.mkdir(f"{path_results}/{current_time_str}/timing/db")
+    os.mkdir(f"{path_results}/{current_time_str}/timing/bc")
+    os.mkdir(f"{path_results}/{current_time_str}/gas_consumption")
+    os.mkdir(f"{path_results}/{current_time_str}/equality_check")
+    os.mkdir(f"{path_results}/{current_time_str}/exception")
 
     return f"{path_results}/{current_time_str}"
 
 
 def save_results(result_dict, path_results):
-    os.mkdir(f"{path_results}/timing")
-    os.mkdir(f"{path_results}/timing/db")
-    os.mkdir(f"{path_results}/timing/bc")
-    os.mkdir(f"{path_results}/gas_consumption")
-    os.mkdir(f"{path_results}/equality_check")
-
     for key, df in result_dict["timing"]["db"].items():
         df.to_csv(f"{path_results}/timing/db/{key}.csv")
     for key, df in result_dict["timing"]["bc"].items():
