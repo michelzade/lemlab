@@ -336,9 +336,14 @@ def plot_time_complexity_distributions(db_timings, bc_timings, path_results=None
                        )
     ax2.set_xlabel("Number of inserted buy and ask bids")
     ax2.set_title("Blockchain LEM")
+    box = ax1.get_position()
+    ax1.set_position([box.x0, box.y0, box.width, box.height * 0.9])
+    # Put a legend to the right of the current axis
+    # ax.legend(loc='center left', bbox_to_anchor=(0.15, 1.05), frameon=False, ncol=2)
+
     fig.legend([l1], labels=["post_positions", "clear_market", "log_meter_readings", "settle_market"],
-               loc="center right")
-    plt.subplots_adjust(right=0.83)
+               loc="center left", frameon=False, bbox_to_anchor=(0.2, 0.05), ncol=4)
+    plt.subplots_adjust(bottom=0.18)
     if path_results is not None:
         fig.savefig(f"{path_results}/computation_distribution.svg")
     plt.show()
@@ -347,17 +352,23 @@ def plot_time_complexity_distributions(db_timings, bc_timings, path_results=None
 def plot_gas_consumption(gas_consumption_dict, path_results=None):
     fig = plt.figure()
     ax = plt.subplot(111)
-    for key, df in gas_consumption_dict.items():
-        y_error = [df.max() - df.mean(), df.mean() - df.min()]
-        ax.errorbar(x=df.columns, y=df.mean(), yerr=y_error, marker="x", label=key.replace("_", " "))
+    h = [ax.errorbar(x=df.columns, y=df.mean(), yerr=[df.max() - df.mean(), df.mean() - df.min()], marker="x",
+                     label=key.replace("_", " ")) for key, df in gas_consumption_dict.items()]
     ax.grid()
     ax.set_ylabel("Gas consumption")
     ax.set_xlabel("Number of inserted buy and ask bids")
-    # Shrink current axis by 20%
+    # Shrink current axis
     box = ax.get_position()
-    ax.set_position([box.x0, box.y0, box.width * 0.7, box.height])
-    # Put a legend to the right of the current axis
-    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)
+    ax.set_position([box.x0, box.y0, box.width, box.height*0.95])
+    n_col = 3
+    n_entries = 5
+    leg1 = ax.legend(handles=h[:n_entries // n_col * n_col], ncol=n_col, loc="center left", frameon=False,
+                     bbox_to_anchor=(0, 1.1))
+    plt.gca().add_artist(leg1)
+    leg2 = ax.legend(handles=h[n_entries // n_col * n_col:], ncol=n_entries - n_entries // n_col * n_col)
+    leg2.remove()
+    leg1._legend_box._children.append(leg2._legend_handle_box)
+    leg1._legend_box.stale = True
     if path_results is not None:
         fig.savefig(f"{path_results}/gas_consumption.svg")
     plt.show()
