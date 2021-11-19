@@ -4,6 +4,7 @@ import json
 import test_utils
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
 from lemlab.lem import clearing_ex_ante
 from bc_test_settlement import test_meter_info, test_user_info, test_meter_readings, test_prices_settlement, \
@@ -210,51 +211,65 @@ def compute_performance_analysis(path_results=None):
             # Check equality of db and bc entries
             try:
                 test_user_info(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante)
-                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = True
-            except AssertionError as a:
-                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = False
+                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = 0
+            except AssertionError as e:
+                diff_str = str(e).split("\n")[2].split("(")[-1].split(")")[0]
+                diff = float(diff_str[:-2])
+                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = diff
                 pass
 
             try:
                 test_meter_info(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante)
-                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = True
-            except AssertionError:
-                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = False
+                result_dict["equality_check"]["meter_info"].loc[sample, n_positions] = 0
+            except AssertionError as e:
+                diff_str = str(e).split("\n")[2].split("(")[-1].split(")")[0]
+                diff = float(diff_str[:-2])
+                result_dict["equality_check"]["meter_info"].loc[sample, n_positions] = diff
                 pass
 
             try:
                 test_clearing_results_ex_ante(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante)
-                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = True
-            except AssertionError:
-                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = False
+                result_dict["equality_check"]["market_results"].loc[sample, n_positions] = 0
+            except AssertionError as e:
+                diff_str = str(e).split("\n")[2].split("(")[-1].split(")")[0]
+                diff = float(diff_str[:-2])
+                result_dict["equality_check"]["market_results"].loc[sample, n_positions] = diff
                 pass
 
             try:
                 test_meter_readings(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
-                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = True
-            except AssertionError:
-                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = False
+                result_dict["equality_check"]["meter_readings"].loc[sample, n_positions] = 0
+            except AssertionError as e:
+                diff_str = str(e).split("\n")[2].split("(")[-1].split(")")[0]
+                diff = float(diff_str[:-2])
+                result_dict["equality_check"]["meter_readings"].loc[sample, n_positions] = diff
                 pass
 
             try:
                 test_prices_settlement(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
-                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = True
-            except AssertionError:
-                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = False
+                result_dict["equality_check"]["prices_settlement"].loc[sample, n_positions] = 0
+            except AssertionError as e:
+                diff_str = str(e).split("\n")[2].split("(")[-1].split(")")[0]
+                diff = float(diff_str[:-2])
+                result_dict["equality_check"]["prices_settlement"].loc[sample, n_positions] = diff
                 pass
 
             try:
                 test_balancing_energy(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
-                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = True
-            except AssertionError:
-                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = False
+                result_dict["equality_check"]["balancing_energy"].loc[sample, n_positions] = 0
+            except AssertionError as e:
+                diff_str = str(e).split("\n")[2].split("(")[-1].split(")")[0]
+                diff = float(diff_str[:-2])
+                result_dict["equality_check"]["balancing_energy"].loc[sample, n_positions] = diff
                 pass
 
             try:
                 test_transaction_logs(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
-                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = True
-            except AssertionError:
-                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = False
+                result_dict["equality_check"]["transaction_logs"].loc[sample, n_positions] = 0
+            except AssertionError as e:
+                diff_str = str(e).split("\n")[2].split("(")[-1].split(")")[0]
+                diff = float(diff_str[:-2])
+                result_dict["equality_check"]["transaction_logs"].loc[sample, n_positions] = diff
                 pass
 
             # Plot results after each iteration
@@ -265,6 +280,8 @@ def compute_performance_analysis(path_results=None):
                                                bc_timings=result_dict["timing"]["bc"],
                                                path_results=path_results)
             plot_gas_consumption(gas_consumption_dict=result_dict["gas_consumption"], path_results=path_results)
+            plot_equality_check(result_dict["equality_check"], path_results=path_results)
+
             save_results(result_dict=result_dict, path_results=path_results)
 
     return result_dict
@@ -341,7 +358,7 @@ def plot_time_complexity_distributions(db_timings, bc_timings, path_results=None
     # Put a legend to the right of the current axis
     # ax.legend(loc='center left', bbox_to_anchor=(0.15, 1.05), frameon=False, ncol=2)
 
-    fig.legend([l1], labels=["post_positions", "clear_market", "log_meter_readings", "settle_market"],
+    fig.legend(l1, labels=["post_positions", "clear_market", "log_meter_readings", "settle_market"],
                loc="center left", frameon=False, bbox_to_anchor=(0.2, 0.05), ncol=4)
     plt.subplots_adjust(bottom=0.18)
     if path_results is not None:
@@ -372,6 +389,18 @@ def plot_gas_consumption(gas_consumption_dict, path_results=None):
     if path_results is not None:
         fig.savefig(f"{path_results}/gas_consumption.svg")
     plt.show()
+
+
+def plot_equality_check(equality_check_dict, path_results=None):
+    for key, df in equality_check_dict.items():
+        svm = sns.heatmap(df, annot=True, vmin=0, vmax=100, cmap="RdYlGn_r", cbar_kws={"label": "Percentage deviation"})
+        plt.xlabel("Number of inserted bids")
+        plt.ylabel("Sample number")
+        plt.title(key)
+        if path_results is not None:
+            fig = svm.get_figure()
+            fig.savefig(f"{path_results}/equality_check_{key}.svg")
+        plt.show()
 
 
 def create_results_folder(path_results):
@@ -429,6 +458,7 @@ if __name__ == '__main__':
     results = compute_performance_analysis(path_results=path_result_folder)
     # Save results to files
     save_results(results, path_result_folder)
+    # path_result_folder = "evaluation_results/2021_11_17_15_30_52"
     # Load data from previous analysis
     results = load_results(path_result_folder=path_result_folder)
     # Plot results
@@ -437,7 +467,4 @@ if __name__ == '__main__':
     plot_time_complexity_distributions(db_timings=results["timing"]["db"], bc_timings=results["timing"]["bc"],
                                        path_results=path_result_folder)
     plot_gas_consumption(results["gas_consumption"], path_results=path_result_folder)
-
-    # # Load results and plot them
-    # results_from_file = pd.read_csv(f"{path_result_folder}/timing_results.csv", index_col=0)
-    # plot_time_complexity_analysis(results["timing"]["db"], results["timing"]["bc"], path_results=path_result_folder)
+    plot_equality_check(results["equality_check"], path_results=path_result_folder)
