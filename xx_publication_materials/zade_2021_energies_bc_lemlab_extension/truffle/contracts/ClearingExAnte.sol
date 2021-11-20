@@ -396,9 +396,13 @@ contract ClearingExAnte {
 		    	filtered_offers = lib.shuffle_bids(filtered_offers);
 		    	filtered_bids = lib.shuffle_bids(filtered_bids);
 	    	}
-	    	//sorting positions by price, quality, and possibly quantity
-            filtered_offers = srt.insertion_sort_offers_bids_price_quality(filtered_offers, true, false, simulation_test, false);
-	    	filtered_bids = srt.insertion_sort_offers_bids_price_quality(filtered_bids, false, false, simulation_test, false);
+	    	// Sorting positions by price and number
+            // filtered_offers = srt.insertion_sort_offers_bids_price_quality(filtered_offers, true, false, simulation_test, false);
+	    	// filtered_bids = srt.insertion_sort_offers_bids_price_quality(filtered_bids, false, false, simulation_test, false);
+			// filtered_offers = srt.insertion_sort_price_number(filtered_offers, true);
+			// filtered_bids = srt.insertion_sort_price_number(filtered_bids, false);
+			filtered_offers = srt.insertion_sort_price_number_quality(filtered_offers, true, true);
+	    	filtered_bids = srt.insertion_sort_price_number_quality(filtered_bids, false, true);
 
 	    	if(verbose) {
 	    		string_to_log = lib.concatenate_strings(lib.concatenate_strings(string_to_log,lib.concatenate_strings("\tOffers length: ",lib.uint_to_string(filtered_offers.length))),"\n");

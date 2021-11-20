@@ -20,17 +20,6 @@ def compute_performance_analysis(path_results=None):
         with open(f"{path_results}/evaluation_config.json", "w+") as write_file:
             json.dump(config, write_file)
 
-    # Clear all tables
-    test_utils.reset_all_market_tables(db_obj=db_obj, bc_obj_market=bc_obj_clearing_ex_ante,
-                                       bc_obj_settlement=bc_obj_settlement)
-
-    # Insert users to db and bc with grid meters for the settlement
-    ids_users, ids_meters, ids_market_agents = test_utils.setup_random_prosumers(db_obj=db_obj,
-                                                                                 bc_obj_market=bc_obj_clearing_ex_ante,
-                                                                                 n_prosumers=
-                                                                                 config["bc_performance_analysis"][
-                                                                                     "n_prosumers"])
-
     # Retrieve range of positions that shall be simulated
     n_positions_range = np.arange(config["bc_performance_analysis"]["n_positions"]["min"],
                                   config["bc_performance_analysis"]["n_positions"]["max"],
@@ -97,9 +86,17 @@ def compute_performance_analysis(path_results=None):
         # Loop through all position samples and execute market clearing
         for n_positions in n_positions_range:
             print(f"Test with {n_positions} positions.")
-            # Reset market tables before each iteration
-            test_utils.reset_dynamic_market_data_tables(db_obj=db_obj, bc_obj_market=bc_obj_clearing_ex_ante,
-                                                        bc_obj_settlement=bc_obj_settlement)
+            # Clear all tables
+            test_utils.reset_all_market_tables(db_obj=db_obj, bc_obj_market=bc_obj_clearing_ex_ante,
+                                               bc_obj_settlement=bc_obj_settlement)
+
+            # Insert users to db and bc with grid meters for settlement
+            ids_users, ids_meters, ids_market_agents = test_utils.setup_random_prosumers(db_obj=db_obj,
+                                                                                         bc_obj_market=bc_obj_clearing_ex_ante,
+                                                                                         n_prosumers=
+                                                                                         config[
+                                                                                             "bc_performance_analysis"][
+                                                                                             "n_prosumers"])
             # Compute random market positions
             positions = test_utils.create_random_positions(db_obj=db_obj,
                                                            config=config,
@@ -210,64 +207,71 @@ def compute_performance_analysis(path_results=None):
 
             # Check equality of db and bc entries
             try:
-                test_user_info(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante)
+                test_user_info(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante,
+                               n_sample=sample, n_positions=n_positions, path_results=path_results)
                 result_dict["equality_check"]["user_info"].loc[sample, n_positions] = 0
             except AssertionError as e:
-                diff_str = str(e).split("\n")[2].split("(")[-1].split(")")[0]
+                diff_str = str(e.args).split("(")[-1].split(")")[0]
                 diff = float(diff_str[:-2])
                 result_dict["equality_check"]["user_info"].loc[sample, n_positions] = diff
                 pass
 
             try:
-                test_meter_info(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante)
+                test_meter_info(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante,
+                                n_sample=sample, n_positions=n_positions, path_results=path_results)
                 result_dict["equality_check"]["meter_info"].loc[sample, n_positions] = 0
             except AssertionError as e:
-                diff_str = str(e).split("\n")[2].split("(")[-1].split(")")[0]
+                diff_str = str(e.args).split("(")[-1].split(")")[0]
                 diff = float(diff_str[:-2])
                 result_dict["equality_check"]["meter_info"].loc[sample, n_positions] = diff
                 pass
 
             try:
-                test_clearing_results_ex_ante(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante)
+                test_clearing_results_ex_ante(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante,
+                                              n_sample=sample, n_positions=n_positions, path_results=path_results)
                 result_dict["equality_check"]["market_results"].loc[sample, n_positions] = 0
             except AssertionError as e:
-                diff_str = str(e).split("\n")[2].split("(")[-1].split(")")[0]
+                diff_str = str(e.args).split("(")[-1].split(")")[0]
                 diff = float(diff_str[:-2])
                 result_dict["equality_check"]["market_results"].loc[sample, n_positions] = diff
                 pass
 
             try:
-                test_meter_readings(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
+                test_meter_readings(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement,
+                                    n_sample=sample, n_positions=n_positions, path_results=path_results)
                 result_dict["equality_check"]["meter_readings"].loc[sample, n_positions] = 0
             except AssertionError as e:
-                diff_str = str(e).split("\n")[2].split("(")[-1].split(")")[0]
+                diff_str = str(e.args).split("(")[-1].split(")")[0]
                 diff = float(diff_str[:-2])
                 result_dict["equality_check"]["meter_readings"].loc[sample, n_positions] = diff
                 pass
 
             try:
-                test_prices_settlement(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
+                test_prices_settlement(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement,
+                                       n_sample=sample, n_positions=n_positions, path_results=path_results)
                 result_dict["equality_check"]["prices_settlement"].loc[sample, n_positions] = 0
             except AssertionError as e:
-                diff_str = str(e).split("\n")[2].split("(")[-1].split(")")[0]
+                diff_str = str(e.args).split("(")[-1].split(")")[0]
                 diff = float(diff_str[:-2])
                 result_dict["equality_check"]["prices_settlement"].loc[sample, n_positions] = diff
                 pass
 
             try:
-                test_balancing_energy(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
+                test_balancing_energy(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement,
+                                      n_sample=sample, n_positions=n_positions, path_results=path_results)
                 result_dict["equality_check"]["balancing_energy"].loc[sample, n_positions] = 0
             except AssertionError as e:
-                diff_str = str(e).split("\n")[2].split("(")[-1].split(")")[0]
+                diff_str = str(e.args).split("(")[-1].split(")")[0]
                 diff = float(diff_str[:-2])
                 result_dict["equality_check"]["balancing_energy"].loc[sample, n_positions] = diff
                 pass
 
             try:
-                test_transaction_logs(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement)
+                test_transaction_logs(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement,
+                                      n_sample=sample, n_positions=n_positions, path_results=path_results)
                 result_dict["equality_check"]["transaction_logs"].loc[sample, n_positions] = 0
             except AssertionError as e:
-                diff_str = str(e).split("\n")[2].split("(")[-1].split(")")[0]
+                diff_str = str(e.args).split("(")[-1].split(")")[0]
                 diff = float(diff_str[:-2])
                 result_dict["equality_check"]["transaction_logs"].loc[sample, n_positions] = diff
                 pass
@@ -275,19 +279,21 @@ def compute_performance_analysis(path_results=None):
             # Plot results after each iteration
             plot_time_complexity_analysis(db_timings=result_dict["timing"]["db"],
                                           bc_timings=result_dict["timing"]["bc"],
-                                          path_results=path_results)
+                                          path_results=path_results, show=False)
             plot_time_complexity_distributions(db_timings=result_dict["timing"]["db"],
                                                bc_timings=result_dict["timing"]["bc"],
-                                               path_results=path_results)
-            plot_gas_consumption(gas_consumption_dict=result_dict["gas_consumption"], path_results=path_results)
-            plot_equality_check(result_dict["equality_check"], path_results=path_results)
+                                               path_results=path_results, show=False)
+            plot_gas_consumption(gas_consumption_dict=result_dict["gas_consumption"], path_results=path_results,
+                                 show=False)
+            plot_equality_check(result_dict["equality_check"], path_results=path_results, show=False)
 
             save_results(result_dict=result_dict, path_results=path_results)
 
     return result_dict
 
 
-def plot_time_complexity_analysis(db_timings, bc_timings, path_results=None, only_full_market=False, reference=None):
+def plot_time_complexity_analysis(db_timings, bc_timings, path_results=None, only_full_market=False, reference=None,
+                                  show=True):
     reference_value = 1
     fig = plt.figure()
     ax = plt.subplot(111)
@@ -327,10 +333,13 @@ def plot_time_complexity_analysis(db_timings, bc_timings, path_results=None, onl
     ax.legend(loc='center left', bbox_to_anchor=(0.15, 1.05), frameon=False, ncol=2)
     if path_results is not None:
         fig.savefig(f"{path_results}/timing_results.svg")
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
 
-def plot_time_complexity_distributions(db_timings, bc_timings, path_results=None):
+def plot_time_complexity_distributions(db_timings, bc_timings, path_results=None, show=True):
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
     norm = db_timings["full_market"].mean() / 100
     l1 = ax1.stackplot(db_timings["full_market"].columns,
@@ -363,10 +372,13 @@ def plot_time_complexity_distributions(db_timings, bc_timings, path_results=None
     plt.subplots_adjust(bottom=0.18)
     if path_results is not None:
         fig.savefig(f"{path_results}/computation_distribution.svg")
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
 
-def plot_gas_consumption(gas_consumption_dict, path_results=None):
+def plot_gas_consumption(gas_consumption_dict, path_results=None, show=True):
     fig = plt.figure()
     ax = plt.subplot(111)
     h = [ax.errorbar(x=df.columns, y=df.mean(), yerr=[df.max() - df.mean(), df.mean() - df.min()], marker="x",
@@ -376,7 +388,7 @@ def plot_gas_consumption(gas_consumption_dict, path_results=None):
     ax.set_xlabel("Number of inserted buy and ask bids")
     # Shrink current axis
     box = ax.get_position()
-    ax.set_position([box.x0, box.y0, box.width, box.height*0.95])
+    ax.set_position([box.x0, box.y0, box.width, box.height * 0.95])
     n_col = 3
     n_entries = 5
     leg1 = ax.legend(handles=h[:n_entries // n_col * n_col], ncol=n_col, loc="center left", frameon=False,
@@ -388,10 +400,13 @@ def plot_gas_consumption(gas_consumption_dict, path_results=None):
     leg1._legend_box.stale = True
     if path_results is not None:
         fig.savefig(f"{path_results}/gas_consumption.svg")
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
 
-def plot_equality_check(equality_check_dict, path_results=None):
+def plot_equality_check(equality_check_dict, path_results=None, show=True):
     for key, df in equality_check_dict.items():
         svm = sns.heatmap(df, annot=True, vmin=0, vmax=100, cmap="RdYlGn_r", cbar_kws={"label": "Percentage deviation"})
         plt.xlabel("Number of inserted bids")
@@ -400,7 +415,10 @@ def plot_equality_check(equality_check_dict, path_results=None):
         if path_results is not None:
             fig = svm.get_figure()
             fig.savefig(f"{path_results}/equality_check_{key}.svg")
-        plt.show()
+        if show:
+            plt.show()
+        else:
+            plt.close()
 
 
 def create_results_folder(path_results):

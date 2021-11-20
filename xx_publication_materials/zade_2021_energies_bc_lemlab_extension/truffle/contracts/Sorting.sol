@@ -408,6 +408,26 @@ contract Sorting {
 		}
 		return lib.reorder_array_bids(new_indices, offers_bids);
 	}
+	// using insertion sort, sorts a list of bids by price, number and quality
+	function insertion_sort_price_number_quality(Lb.LemLib.offer_bid[] memory bids, bool ascending_price,  bool ascending_quality) public view returns(Lb.LemLib.offer_bid[] memory) {
+		if(bids.length == 0) return bids;
+		uint[] memory prices = lib.arr_of_prices_offerbids(bids);
+		uint[] memory bid_numbers = lib.arr_of_bid_numbers(bids);
+		uint[] memory qualities = lib.arr_of_qualities_offerbids(bids);
+		uint[] memory new_indices;
+		new_indices = get_insertion_sort_indices_three_keys(prices, bid_numbers, qualities, ascending_price, true, ascending_quality);
+		return lib.reorder_array_bids(new_indices, bids);
+	}
+	// using insertion sort, sorts a list of bids by price and number.
+	// if simulation_test is true, it also performs the sort over the additional key of quantity
+	function insertion_sort_price_number(Lb.LemLib.offer_bid[] memory bids, bool ascending_price) public view returns(Lb.LemLib.offer_bid[] memory) {
+		if(bids.length == 0) return bids;
+		uint[] memory prices = lib.arr_of_prices_offerbids(bids);
+		uint[] memory bid_numbers = lib.arr_of_bid_numbers(bids);
+		uint[] memory new_indices;
+		new_indices = get_insertion_sort_indices_two_keys(prices, bid_numbers, ascending_price, true);
+		return lib.reorder_array_bids(new_indices, bids);
+	}
 	//aggregate positions with the same user id, same price, and same quality. the quantity of energy is summed up
     function aggregate_identical_positions(Lb.LemLib.offer_bid[] memory offers_bids, bool simulation_test) public view returns (Lb.LemLib.offer_bid[] memory) {
         if(offers_bids.length >= 2) {

@@ -345,6 +345,14 @@ contract LemLib {
         }
         return arr_qualities;
     }
+    // Returns an array of bid numbers
+    function arr_of_bid_numbers(offer_bid[] memory bids) public pure returns(uint[] memory) {
+        uint[] memory arr_bid_numbers = new uint[](bids.length);
+        for (uint i = 0; i < arr_bid_numbers.length;i++) {
+            arr_bid_numbers[i] = bids[i].quality_energy;
+        }
+        return arr_bid_numbers;
+    }
     //concatenates two arrays of offer_bid into a new array and return it
     function concatenate_bids(offer_bid[] memory one, offer_bid[] memory two) public pure returns (offer_bid[] memory) {
         offer_bid[] memory concat = new offer_bid[](one.length + two.length);
