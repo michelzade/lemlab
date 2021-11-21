@@ -1,0 +1,5 @@
+##############################################################################
+# Telegram bot configuration
+telegram:
+  'bot_token': '1650825447:AAHLl4PMKTw38ZMxgfb_Rb1U46xVVcAZT8g'    # Bot token
+  'chat_ids': [-463574075]                                         # Chat IDs
