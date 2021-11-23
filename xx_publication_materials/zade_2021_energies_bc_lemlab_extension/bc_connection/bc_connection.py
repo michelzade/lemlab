@@ -14,7 +14,7 @@ class BlockchainConnection:
     def __init__(self, bc_dict):
         try:
             web3_instance = Web3(HTTPProvider("http://" + bc_dict.get("host") + ":" + bc_dict.get("port"),
-                                              request_kwargs={'timeout': bc_dict.get("timeout")}))
+                                              request_kwargs={'timeout': bc_dict.get("http_timeout")}))
             # getting abi, bytecode, address via json file created by truffle
             json_path = os.path.join(bc_dict["path_abi"], bc_dict.get("contract_name") + '.json')
             with open(json_path) as json_file:
@@ -29,6 +29,7 @@ class BlockchainConnection:
             self.web3_eth = web3_instance.eth
             self.coinbase = web3_instance.eth.coinbase
             self.functions = self.contract.functions
+            self.tx_timeout = bc_dict.get("tx_timeout")
             self.contract_name = bc_dict.get("contract_name")
             if self.contract_name == "Settlement":
                 self.events_energy_added = self.contract.events.energy_added.createFilter(fromBlock='latest')
@@ -655,7 +656,7 @@ class BlockchainConnection:
     # Utility functions
     ###################################################
     def wait_for_transact(self, tx_hash):
-        tx_receipt = self.web3_eth.waitForTransactionReceipt(tx_hash)
+        tx_receipt = self.web3_eth.waitForTransactionReceipt(tx_hash, timeout=self.tx_timeout)
         return tx_receipt
 
     # function that gets temporary/permanent offers or bids from the blockchain.
