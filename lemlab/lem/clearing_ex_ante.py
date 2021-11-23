@@ -1007,13 +1007,11 @@ def clearing_pda(db_obj,
         offers = offers.sample(frac=1).reset_index(drop=True)
     try:
         # Sort values first by price and quality
-        offers_sorted = offers.sort_values(by=[db_obj.db_param.PRICE_ENERGY, db_obj.db_param.NUMBER_POSITION,
-                                               db_obj.db_param.QUALITY_ENERGY],
-                                           ascending=[True, True, True],
+        offers_sorted = offers.sort_values(by=[db_obj.db_param.PRICE_ENERGY],
+                                           ascending=[True],
                                            ignore_index=True)
-        bids_sorted = bids.sort_values(by=[db_obj.db_param.PRICE_ENERGY, db_obj.db_param.NUMBER_POSITION,
-                                           db_obj.db_param.QUALITY_ENERGY],
-                                       ascending=[False, True, True],
+        bids_sorted = bids.sort_values(by=[db_obj.db_param.PRICE_ENERGY],
+                                       ascending=[False],
                                        ignore_index=True)
         # Set index of bids and offers to cumulated energy qty sums
         bids_sorted.set_index(bids_sorted[db_obj.db_param.QTY_ENERGY].cumsum(), inplace=True)
