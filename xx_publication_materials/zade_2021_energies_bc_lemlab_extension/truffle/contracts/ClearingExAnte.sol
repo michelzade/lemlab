@@ -401,8 +401,10 @@ contract ClearingExAnte {
 	    	// filtered_bids = srt.insertion_sort_offers_bids_price_quality(filtered_bids, false, false, simulation_test, false);
 			// filtered_offers = srt.insertion_sort_price_number(filtered_offers, true);
 			// filtered_bids = srt.insertion_sort_price_number(filtered_bids, false);
-			filtered_offers = srt.insertion_sort_price_number_quality(filtered_offers, true, true);
-	    	filtered_bids = srt.insertion_sort_price_number_quality(filtered_bids, false, true);
+			// filtered_offers = srt.insertion_sort_price_number_quality(filtered_offers, true, true);
+			// filtered_bids = srt.insertion_sort_price_number_quality(filtered_bids, false, true);
+			filtered_offers = srt.quick_sort_offers_bids_price(filtered_offers, true);
+	    	filtered_bids = srt.quick_sort_offers_bids_price(filtered_bids, false);
 
 	    	if(verbose) {
 	    		string_to_log = lib.concatenate_strings(lib.concatenate_strings(string_to_log,lib.concatenate_strings("\tOffers length: ",lib.uint_to_string(filtered_offers.length))),"\n");
