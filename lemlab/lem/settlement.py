@@ -179,7 +179,7 @@ def calculate_virtual_submeters(db_obj, list_ts_delivery):
         db_obj.log_readings_meter_delta(df_meter_reading_delta)
 
 
-def determine_balancing_energy(db_obj, list_ts_delivery):
+def determine_balancing_energy(db_obj, list_ts_delivery, df_market_results=None, df_meter_readings=None):
     """
     Calculate balancing energy used by each main meter.
     Balancing energy is the deviation from the ex-ante market result during ts_delivery
@@ -200,11 +200,18 @@ def determine_balancing_energy(db_obj, list_ts_delivery):
     list_ts_delivery = sorted(list_ts_delivery)
     ts_d_first = list_ts_delivery[0] if len(list_ts_delivery) else 0
     ts_d_last = list_ts_delivery[-1] if len(list_ts_delivery) else 0
-    market_results_all, _, = db_obj.get_results_market_ex_ante(ts_delivery_first=ts_d_first,
-                                                               ts_delivery_last=ts_d_last)
+    if df_market_results is None:
+        market_results_all, _, = db_obj.get_results_market_ex_ante(ts_delivery_first=ts_d_first,
+                                                                   ts_delivery_last=ts_d_last)
+    else:
+        market_results_all = df_market_results
+
     for ts_d in list_ts_delivery:
         # return MAIN meter reading deltas and ex-ante market results
-        main_meter_readings_delta = db_obj.get_meter_readings_by_type(ts_delivery=ts_d, types_meters=[4, 5])
+        if df_meter_readings is None:
+            main_meter_readings_delta = db_obj.get_meter_readings_by_type(ts_delivery=ts_d, types_meters=[4, 5])
+        else:
+            main_meter_readings_delta = df_meter_readings[df_meter_readings[db_obj.db_param.TS_DELIVERY] == ts_d]
         main_meter_readings_delta["energy_net"] = main_meter_readings_delta[db_obj.db_param.ENERGY_OUT] \
             - main_meter_readings_delta[db_obj.db_param.ENERGY_IN]
 
@@ -233,6 +240,8 @@ def determine_balancing_energy(db_obj, list_ts_delivery):
     # if any values calculated, post to database
     if len(dict_bal_ener[db_obj.db_param.ID_METER]):
         db_obj.log_energy_balancing(pd.DataFrame().from_dict(dict_bal_ener))
+
+    return pd.DataFrame().from_dict(dict_bal_ener)
 
 
 def update_balance_balancing_costs(db_obj, t_now, lem_config, list_ts_delivery, id_retailer="retailer01"):
