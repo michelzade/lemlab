@@ -209,75 +209,36 @@ def compute_performance_analysis(path_results=None, exception_handler=None):
                     break
 
                 # Check equality of db and bc entries
-                try:
-                    test_user_info(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante,
-                                   n_sample=sample, n_positions=n_positions, path_results=path_results)
-                    result_dict["equality_check"]["user_info"].loc[sample, n_positions] = 0
-                except AssertionError as e:
-                    diff_str = str(e.args).split("(")[-1].split(")")[0]
-                    diff = float(diff_str[:-2])
-                    result_dict["equality_check"]["user_info"].loc[sample, n_positions] = diff
-                    pass
+                result_dict["equality_check"]["user_info"].loc[sample, n_positions] = test_user_info(
+                    db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante, n_sample=sample,
+                    n_positions=n_positions, path_results=path_results)
 
-                try:
-                    test_meter_info(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante,
-                                    n_sample=sample, n_positions=n_positions, path_results=path_results)
-                    result_dict["equality_check"]["meter_info"].loc[sample, n_positions] = 0
-                except AssertionError as e:
-                    diff_str = str(e.args).split("(")[-1].split(")")[0]
-                    diff = float(diff_str[:-2])
-                    result_dict["equality_check"]["meter_info"].loc[sample, n_positions] = diff
-                    pass
+                result_dict["equality_check"]["meter_info"].loc[sample, n_positions] = test_meter_info(
+                    db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante, n_sample=sample,
+                    n_positions=n_positions, path_results=path_results)
 
-                try:
-                    test_clearing_results_ex_ante(db_obj=db_obj, bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante,
-                                                  n_sample=sample, n_positions=n_positions, path_results=path_results)
-                    result_dict["equality_check"]["market_results"].loc[sample, n_positions] = 0
-                except AssertionError as e:
-                    diff_str = str(e.args).split("(")[-1].split(")")[0]
-                    diff = float(diff_str[:-2])
-                    result_dict["equality_check"]["market_results"].loc[sample, n_positions] = diff
-                    pass
+                result_dict["equality_check"]["market_results"].loc[
+                    sample, n_positions] = test_clearing_results_ex_ante(db_obj=db_obj,
+                                                                         bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante,
+                                                                         n_sample=sample, n_positions=n_positions,
+                                                                         path_results=path_results)
 
-                try:
-                    test_meter_readings(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement,
-                                        n_sample=sample, n_positions=n_positions, path_results=path_results)
-                    result_dict["equality_check"]["meter_readings"].loc[sample, n_positions] = 0
-                except AssertionError as e:
-                    diff_str = str(e.args).split("(")[-1].split(")")[0]
-                    diff = float(diff_str[:-2])
-                    result_dict["equality_check"]["meter_readings"].loc[sample, n_positions] = diff
-                    pass
+                result_dict["equality_check"]["meter_readings"].loc[sample, n_positions] = test_meter_readings(
+                    db_obj=db_obj, bc_obj_settlement=bc_obj_settlement,
+                    n_sample=sample, n_positions=n_positions, path_results=path_results)
 
-                try:
-                    test_prices_settlement(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement,
-                                           n_sample=sample, n_positions=n_positions, path_results=path_results)
-                    result_dict["equality_check"]["prices_settlement"].loc[sample, n_positions] = 0
-                except AssertionError as e:
-                    diff_str = str(e.args).split("(")[-1].split(")")[0]
-                    diff = float(diff_str[:-2])
-                    result_dict["equality_check"]["prices_settlement"].loc[sample, n_positions] = diff
-                    pass
+                result_dict["equality_check"]["prices_settlement"].loc[sample, n_positions] = test_prices_settlement(
+                    db_obj=db_obj, bc_obj_settlement=bc_obj_settlement,
+                    n_sample=sample, n_positions=n_positions, path_results=path_results)
 
-                try:
-                    test_balancing_energy(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement,
-                                          n_sample=sample, n_positions=n_positions, path_results=path_results)
-                    result_dict["equality_check"]["balancing_energy"].loc[sample, n_positions] = 0
-                except AssertionError as e:
-                    diff_str = str(e.args).split("(")[-1].split(")")[0]
-                    diff = float(diff_str[:-2])
-                    result_dict["equality_check"]["balancing_energy"].loc[sample, n_positions] = diff
-                    pass
+                result_dict["equality_check"]["balancing_energy"].loc[sample, n_positions] = test_balancing_energy(
+                    db_obj=db_obj, bc_obj_settlement=bc_obj_settlement,
+                    bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante, n_sample=sample, n_positions=n_positions,
+                    path_results=path_results)
 
-                try:
-                    test_transaction_logs(db_obj=db_obj, bc_obj_settlement=bc_obj_settlement,
-                                          n_sample=sample, n_positions=n_positions, path_results=path_results)
-                    result_dict["equality_check"]["transaction_logs"].loc[sample, n_positions] = 0
-                except AssertionError as e:
-                    diff_str = str(e.args).split("(")[-1].split(")")[0]
-                    diff = float(diff_str[:-2])
-                    result_dict["equality_check"]["transaction_logs"].loc[sample, n_positions] = diff
-                    pass
+                result_dict["equality_check"]["transaction_logs"].loc[sample, n_positions] = test_transaction_logs(
+                    db_obj=db_obj, bc_obj_settlement=bc_obj_settlement,
+                    n_sample=sample, n_positions=n_positions, path_results=path_results)
 
                 # Plot results after each iteration
                 plot_time_complexity_analysis(db_timings=result_dict["timing"]["db"],
@@ -293,8 +254,9 @@ def compute_performance_analysis(path_results=None, exception_handler=None):
                 save_results(result_dict=result_dict, path_results=path_results)
 
     except Exception as e:
-        exception_handler.send_msg(message=f"BC-Performance-Analysis threw an exception at sample #{sample} "
-                                           f"and {n_positions} inserted positions. \n {str(e)}")
+        exception_handler.send_msg(message=f"Exception: BC-Performance-Analysis "
+                                           f"\nSample #{sample} and {n_positions} inserted positions. "
+                                           f"\n{str(e)}")
         raise e
 
     return result_dict
@@ -460,7 +422,8 @@ def plot_gas_consumption(gas_consumption_dict, path_results=None, show=True):
 
 def plot_equality_check(equality_check_dict, path_results=None, show=True):
     for key, df in equality_check_dict.items():
-        svm = sns.heatmap(df, annot=True, vmin=0, vmax=100, cmap="RdYlGn_r", cbar_kws={"label": "Percentage deviation"})
+        svm = sns.heatmap(df.dropna(), annot=True, vmin=0, vmax=100, cmap="RdYlGn_r",
+                          cbar_kws={"label": "Percentage deviation"})
         plt.xlabel("Number of inserted bids")
         plt.ylabel("Sample number")
         plt.title(key)
@@ -527,14 +490,16 @@ if __name__ == '__main__':
     with open(f"telegram_config.yaml") as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
     # Create sender object
-    telegram_sender = SenderTelegram({'bot_token': config['telegram']['bot_token'], 'chat_ids': config['telegram']['chat_ids']})
+    telegram_sender = SenderTelegram(
+        {'bot_token': config['telegram']['bot_token'], 'chat_ids': config['telegram']['chat_ids']})
     # Create result folder
     path_result_folder = create_results_folder(path_results="evaluation_results")
     # Compute performance analysis
     results = compute_performance_analysis(path_results=path_result_folder, exception_handler=telegram_sender)
     # Save results to files
     save_results(results, path_result_folder)
-    # path_result_folder = "evaluation_results/2021_11_21_13_22_24"
+    # # path_result_folder = "evaluation_results/2021_11_21_13_22_24"
+    # path_result_folder = "H:/Dissertation/Local Energy Markets/Solidity toolbox for LEMs/2021_11_21_23_30_29"
     # Load data from previous analysis
     results = load_results(path_result_folder=path_result_folder)
     # Plot results
