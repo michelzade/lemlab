@@ -1,6 +1,7 @@
 import pytest
 import test_utils
 import pandas as pd
+from lemlab.lem.settlement import determine_balancing_energy
 
 config = None
 db_obj = None
@@ -48,16 +49,26 @@ def test_clearing_results_ex_ante(db_obj=None, bc_obj_clearing_ex_ante=None, n_s
     try:
         # Check whether market results are equal on db and bc
         pd.testing.assert_frame_equal(clearing_ex_ante_results_bc, clearing_ex_ante_results_db, check_dtype=False)
+        diff = 0
     except AssertionError as e:
-        if clearing_ex_ante_results_db.groupby(by=db_obj.db_param.ID_USER_BID).sum()["qty_energy_traded"].equals(clearing_ex_ante_results_bc.groupby(by=db_obj.db_param.ID_USER_BID).sum()["qty_energy_traded"]):
+        # Check whether welfare is equal
+        db_welfare = ((clearing_ex_ante_results_db["price_energy_bid"] - clearing_ex_ante_results_db["price_energy_offer"]) * clearing_ex_ante_results_db["qty_energy_traded"]).sum()
+        bc_welfare = ((clearing_ex_ante_results_bc["price_energy_bid"] - clearing_ex_ante_results_bc["price_energy_offer"]) * clearing_ex_ante_results_bc["qty_energy_traded"]).sum()
+        if db_welfare == bc_welfare:
+            # if welfare is equal then results are equally acceptable, hence pass
+            diff = 0
             pass
         else:
+            if "DataFrame are different" in str(e.args):
+                diff = 100
+            else:
+                diff = float(str(e.args).split("(")[-1].split(")")[0][:-2])
             if path_results:
                 clearing_ex_ante_results_db.to_csv(
                     f"{path_results}/exception/{n_sample}_{n_positions}_unequal_clearing_ex_ante_results_db.csv")
                 clearing_ex_ante_results_bc.to_csv(
                     f"{path_results}/exception/{n_sample}_{n_positions}_unequal_clearing_ex_ante_results_bc.csv")
-            raise e
+    return diff
 
 
 def test_meter_readings(db_obj=None, bc_obj_settlement=None, n_sample=None, n_positions=None, path_results=None):
@@ -70,10 +81,18 @@ def test_meter_readings(db_obj=None, bc_obj_settlement=None, n_sample=None, n_po
     meter_readings_delta_db = meter_readings_delta_db.reset_index(drop=True)
 
     # Check whether meter_readings_delta on bc and db are equal
-    pd.testing.assert_frame_equal(meter_readings_delta_bc, meter_readings_delta_db, check_dtype=False)
+    try:
+        pd.testing.assert_frame_equal(meter_readings_delta_bc, meter_readings_delta_db, check_dtype=False)
+        diff = 0
+    except AssertionError as e:
+        if "DataFrame are different" in str(e.args):
+            diff = 100
+        else:
+            diff = float(str(e.args).split("(")[-1].split(")")[0][:-2])
+    return diff
 
 
-def test_balancing_energy(db_obj=None, bc_obj_settlement=None, n_sample=None, n_positions=None, path_results=None):
+def test_balancing_energy(db_obj=None, bc_obj_settlement=None, bc_obj_clearing_ex_ante=None, n_sample=None, n_positions=None, path_results=None):
     # Get energy balances from db and bc
     balancing_energies_db = db_obj.get_energy_balancing()
     balancing_energies_bc = bc_obj_settlement.get_energy_balances()
@@ -97,11 +116,54 @@ def test_balancing_energy(db_obj=None, bc_obj_settlement=None, n_sample=None, n_
 
     try:
         pd.testing.assert_frame_equal(balancing_energies_db, balancing_energies_bc, check_dtype=False)
+        diff = 0
     except AssertionError as e:
-        if path_results:
-            balancing_energies_db.to_csv(f"{path_results}/exception/{n_sample}_{n_positions}_unequal_balancing_energy_db.csv")
-            balancing_energies_bc.to_csv(f"{path_results}/exception/{n_sample}_{n_positions}_unequal_balancing_energy_bc.csv")
-        raise e
+        # Check whether balancing energies are correctly computed by checking in python
+        # Get market results from db and bc
+        clearing_ex_ante_results_db, _ = db_obj.get_results_market_ex_ante()
+        clearing_ex_ante_results_bc = bc_obj_clearing_ex_ante.get_market_results()
+        # Get meter readings delta
+        meter_readings_delta_bc = bc_obj_settlement.get_meter_readings_delta().sort_values(
+            by=[db_obj.db_param.TS_DELIVERY, db_obj.db_param.ID_METER])
+        meter_readings_delta_bc = meter_readings_delta_bc.reset_index(drop=True)
+        meter_readings_delta_db = db_obj.get_meter_readings_delta().sort_values(
+            by=[db_obj.db_param.TS_DELIVERY, db_obj.db_param.ID_METER])
+        meter_readings_delta_db = meter_readings_delta_db.reset_index(drop=True)
+        # Calculate balancing energies with python implementation
+        balancing_energy_db_python = determine_balancing_energy(db_obj=db_obj, list_ts_delivery=clearing_ex_ante_results_db[db_obj.db_param.TS_DELIVERY].unique(), df_market_results=clearing_ex_ante_results_db, df_meter_readings=meter_readings_delta_db)
+        balancing_energy_bc_python = determine_balancing_energy(db_obj=db_obj, list_ts_delivery=clearing_ex_ante_results_bc[db_obj.db_param.TS_DELIVERY].unique(), df_market_results=clearing_ex_ante_results_bc, df_meter_readings=meter_readings_delta_bc)
+        # Reindex column order
+        balancing_energy_bc_python = balancing_energy_bc_python.reindex(sorted(balancing_energy_bc_python.columns), axis=1)
+        balancing_energy_db_python = balancing_energy_db_python.reindex(sorted(balancing_energy_db_python.columns), axis=1)
+        # Create a unique string, then apply a stable sort, and drop index
+        balancing_energy_db_python = balancing_energy_db_python.assign(sort_idx=[','.join(ele.split()) for ele in
+                                                                       balancing_energy_db_python.to_string(
+                                                                           header=False, index=False,
+                                                                           index_names=False).split(
+                                                                           '\n')]).sort_values(
+            by="sort_idx", kind="stable").reset_index(drop=True)
+        balancing_energy_bc_python = balancing_energy_bc_python.assign(sort_idx=[','.join(ele.split()) for ele in
+                                                                       balancing_energy_bc_python.to_string(
+                                                                           header=False,
+                                                                           index=False,
+                                                                           index_names=False).split(
+                                                                           '\n')]).sort_values(
+            by="sort_idx", kind="stable").reset_index(drop=True)
+
+        if balancing_energy_bc_python.equals(balancing_energies_bc) and \
+                balancing_energy_db_python.equals(balancing_energies_db):
+            diff = 0
+            pass
+        else:
+            if "DataFrame are different" in str(e.args):
+                diff = 100
+            else:
+                diff = float(str(e.args).split("(")[-1].split(")")[0][:-2])
+            if path_results:
+                balancing_energies_db.to_csv(f"{path_results}/exception/{n_sample}_{n_positions}_unequal_balancing_energy_db.csv")
+                balancing_energies_bc.to_csv(f"{path_results}/exception/{n_sample}_{n_positions}_unequal_balancing_energy_bc.csv")
+
+    return diff
 
 
 def test_prices_settlement(db_obj=None, bc_obj_settlement=None, n_sample=None, n_positions=None, path_results=None):
@@ -116,7 +178,15 @@ def test_prices_settlement(db_obj=None, bc_obj_settlement=None, n_sample=None, n
     settlement_prices_bc = settlement_prices_bc.reset_index(drop=True)
 
     # Check whether settlement prices are equal on db and bc
-    pd.testing.assert_frame_equal(settlement_prices_db, settlement_prices_bc)
+    try:
+        pd.testing.assert_frame_equal(settlement_prices_db, settlement_prices_bc)
+        diff = 0
+    except AssertionError as e:
+        if "DataFrame are different" in str(e.args):
+            diff = 100
+        else:
+            diff = float(str(e.args).split("(")[-1].split(")")[0][:-2])
+    return diff
 
 
 def test_transaction_logs(db_obj=None, bc_obj_settlement=None, n_sample=None, n_positions=None, path_results=None):
@@ -150,11 +220,17 @@ def test_transaction_logs(db_obj=None, bc_obj_settlement=None, n_sample=None, n_
     try:
         # Check whether all transactions on bc and db are equal
         pd.testing.assert_frame_equal(log_transactions_db, log_transactions_bc)
+        diff = 0
     except AssertionError as e:
+        if "DataFrame are different" in str(e.args):
+            diff = 100
+        else:
+            diff = float(str(e.args).split("(")[-1].split(")")[0][:-2])
         if path_results:
             log_transactions_db.to_csv(f"{path_results}/exception/{n_sample}_{n_positions}_unequal_log_txs_db.csv")
             log_transactions_bc.to_csv(f"{path_results}/exception/{n_sample}_{n_positions}_unequal_log_txs_bc.csv")
-        raise e
+
+    return diff
 
 
 def test_user_info(db_obj=None, bc_obj_clearing_ex_ante=None, n_sample=None, n_positions=None, path_results=None):
@@ -184,11 +260,16 @@ def test_user_info(db_obj=None, bc_obj_clearing_ex_ante=None, n_sample=None, n_p
 
     try:
         pd.testing.assert_frame_equal(info_user_db, info_user_bc)
+        diff = 0
     except AssertionError as e:
+        if "DataFrame are different" in str(e.args):
+            diff = 100
+        else:
+            diff = float(str(e.args).split("(")[-1].split(")")[0][:-2])
         if path_results:
             info_user_db.to_csv(f"{path_results}/exception/{n_sample}_{n_positions}_unequal_user_infos_db.csv")
             info_user_bc.to_csv(f"{path_results}/exception/{n_sample}_{n_positions}_unequal_user_infos_bc.csv")
-        raise e
+    return diff
 
 
 def test_meter_info(db_obj=None, bc_obj_clearing_ex_ante=None, n_sample=None, n_positions=None, path_results=None):
@@ -200,4 +281,12 @@ def test_meter_info(db_obj=None, bc_obj_clearing_ex_ante=None, n_sample=None, n_
     info_meter_bc = info_meter_bc.sort_values(by=[db_obj.db_param.ID_METER])
     info_meter_bc = info_meter_bc.reset_index(drop=True)
 
-    pd.testing.assert_frame_equal(info_meter_db, info_meter_bc)
+    try:
+        pd.testing.assert_frame_equal(info_meter_db, info_meter_bc)
+        diff = 0
+    except AssertionError as e:
+        if "DataFrame are different" in str(e.args):
+            diff = 100
+        else:
+            diff = float(str(e.args).split("(")[-1].split(")")[0][:-2])
+    return diff
