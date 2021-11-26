@@ -11,10 +11,14 @@ from telegram_connector_class import SenderTelegram
 from lemlab.lem import clearing_ex_ante
 from bc_test_settlement import test_meter_info, test_user_info, test_meter_readings, test_prices_settlement, \
     test_transaction_logs, test_balancing_energy, test_clearing_results_ex_ante
+from xx_publication_materials.zade_2021_energies_bc_lemlab_extension.bc_connection.bc_node \
+    import kill_process_by_name, start_openethereum_node, restart_openethereum_node
 
 
-def compute_performance_analysis(path_results=None, exception_handler=None):
+def compute_performance_analysis(path_results=None, exception_handler=None, path_openethereum_toml=None):
     try:
+        # Start openethereum node
+        start_openethereum_node(path_toml_file=path_openethereum_toml)
         print(f"Performance analysis started...")
         config, db_obj, bc_obj_clearing_ex_ante, bc_obj_settlement = test_utils.setup_test_general(
             generate_random_test_data=False, test_config_path="sim_test_config.yaml")
@@ -85,128 +89,130 @@ def compute_performance_analysis(path_results=None, exception_handler=None):
 
         print(f"Setup complete.")
         for sample in range(config["bc_performance_analysis"]["n_samples"]):
-            print(f"### Sample No. {sample} ###")
             # Loop through all position samples and execute market clearing
             for n_positions in n_positions_range:
-                print(f"Test with {n_positions} positions.")
-                # Clear all tables
-                test_utils.reset_all_market_tables(db_obj=db_obj, bc_obj_market=bc_obj_clearing_ex_ante,
-                                                   bc_obj_settlement=bc_obj_settlement)
+                success = False
+                n_restarts = 0
+                max_n_restarts = config["bc_performance_analysis"]["max_n_restart_node"]
+                while not success:
+                    try:
+                        print(f"### Sample #{sample} with {n_positions} positions.")
+                        # Clear all tables
+                        test_utils.reset_all_market_tables(db_obj=db_obj, bc_obj_market=bc_obj_clearing_ex_ante,
+                                                           bc_obj_settlement=bc_obj_settlement)
 
-                # Insert users to db and bc with grid meters for settlement
-                ids_users, ids_meters, ids_market_agents = test_utils.setup_random_prosumers(db_obj=db_obj,
-                                                                                             bc_obj_market=bc_obj_clearing_ex_ante,
-                                                                                             n_prosumers=
-                                                                                             config[
-                                                                                                 "bc_performance_analysis"][
-                                                                                                 "n_prosumers"])
-                # Compute random market positions
-                positions = test_utils.create_random_positions(db_obj=db_obj,
-                                                               config=config,
-                                                               ids_user=ids_meters,
-                                                               n_positions=n_positions,
-                                                               verbose=False)
+                        # Insert users to db and bc with grid meters for settlement
+                        ids_users, ids_meters, ids_market_agents = test_utils.setup_random_prosumers(db_obj=db_obj,
+                                                                                                     bc_obj_market=bc_obj_clearing_ex_ante,
+                                                                                                     n_prosumers=
+                                                                                                     config[
+                                                                                                         "bc_performance_analysis"][
+                                                                                                         "n_prosumers"])
+                        # Compute random market positions
+                        positions = test_utils.create_random_positions(db_obj=db_obj,
+                                                                       config=config,
+                                                                       ids_user=ids_meters,
+                                                                       n_positions=n_positions,
+                                                                       verbose=False)
 
-                # Initialize clearing parameters
-                config_retailer = None
-                t_override = round(time.time())
-                shuffle = False
-                plotting = False
-                verbose = False
-                sim_path = ""
+                        # Initialize clearing parameters
+                        config_retailer = None
+                        t_override = round(time.time())
+                        shuffle = False
+                        plotting = False
+                        verbose = False
+                        sim_path = ""
 
-                #############################
-                # Central database LEM ######
-                #############################
-                try:
-                    # Post positions ###
-                    t_post_positions_start_db = time.time()
-                    db_obj.post_positions(positions)
-                    t_post_positions_end_db = time.time()
-                    t_post_positions_db = t_post_positions_end_db - t_post_positions_start_db
-                    result_dict["timing"]["db"]["post_positions"].loc[sample, n_positions] = t_post_positions_db
-                    # Clear market ex ante ###
-                    t_clear_market_start_db = time.time()
-                    clearing_ex_ante.market_clearing(db_obj=db_obj, config_lem=config["lem"],
-                                                     config_retailer=config_retailer,
-                                                     t_override=t_override, plotting=plotting, verbose=verbose,
-                                                     rounding_method=False)
-                    t_clear_market_end_db = time.time()
-                    t_clear_market_db = t_clear_market_end_db - t_clear_market_start_db
-                    result_dict["timing"]["db"]["clear_market"].loc[sample, n_positions] = t_clear_market_db
-                    # Simulate meter readings from market results with random errors for settlement
-                    simulated_meter_readings_delta, ts_delivery_list = test_utils.simulate_meter_readings_from_market_results(
-                        db_obj=db_obj, rand_percent_var=15)
-                    # Log meter readings to LEM ###
-                    t_log_meter_readings_start_db = time.time()
-                    db_obj.log_readings_meter_delta(simulated_meter_readings_delta)
-                    t_log_meter_readings_end_db = time.time()
-                    t_log_meter_readings_db = t_log_meter_readings_end_db - t_log_meter_readings_start_db
-                    result_dict["timing"]["db"]["log_meter_readings"].loc[sample, n_positions] = t_log_meter_readings_db
-                    # Settle market ###
-                    t_settle_market_start_db = time.time()
-                    test_utils.settle_market_db(config=config, db_obj=db_obj, ts_delivery_list=ts_delivery_list,
-                                                path_sim=sim_path)
-                    t_settle_market_end_db = time.time()
-                    t_settle_market_db = t_settle_market_end_db - t_settle_market_start_db
-                    result_dict["timing"]["db"]["settle_market"].loc[sample, n_positions] = t_settle_market_db
-                    # Full computation time ###
-                    t_full_market_db = t_post_positions_db + t_clear_market_db + t_log_meter_readings_db + t_settle_market_db
-                    result_dict["timing"]["db"]["full_market"].loc[sample, n_positions] = t_full_market_db
-                    print(f"Central LEM successfully cleared {n_positions} positions in {t_full_market_db} s.")
-                except Exception as e:
-                    print(e)
-                    result_dict["exception"]["db"][sample] = e
-                    break
+                        #############################
+                        # Central database LEM ######
+                        #############################
+                        # Post positions ###
+                        t_post_positions_start_db = time.time()
+                        db_obj.post_positions(positions)
+                        t_post_positions_end_db = time.time()
+                        t_post_positions_db = t_post_positions_end_db - t_post_positions_start_db
+                        result_dict["timing"]["db"]["post_positions"].loc[sample, n_positions] = t_post_positions_db
+                        # Clear market ex ante ###
+                        t_clear_market_start_db = time.time()
+                        clearing_ex_ante.market_clearing(db_obj=db_obj, config_lem=config["lem"],
+                                                         config_retailer=config_retailer,
+                                                         t_override=t_override, plotting=plotting, verbose=verbose,
+                                                         rounding_method=False)
+                        t_clear_market_end_db = time.time()
+                        t_clear_market_db = t_clear_market_end_db - t_clear_market_start_db
+                        result_dict["timing"]["db"]["clear_market"].loc[sample, n_positions] = t_clear_market_db
+                        # Simulate meter readings from market results with random errors for settlement
+                        simulated_meter_readings_delta, ts_delivery_list = test_utils.simulate_meter_readings_from_market_results(
+                            db_obj=db_obj, rand_percent_var=15)
+                        # Log meter readings to LEM ###
+                        t_log_meter_readings_start_db = time.time()
+                        db_obj.log_readings_meter_delta(simulated_meter_readings_delta)
+                        t_log_meter_readings_end_db = time.time()
+                        t_log_meter_readings_db = t_log_meter_readings_end_db - t_log_meter_readings_start_db
+                        result_dict["timing"]["db"]["log_meter_readings"].loc[sample, n_positions] = t_log_meter_readings_db
+                        # Settle market ###
+                        t_settle_market_start_db = time.time()
+                        test_utils.settle_market_db(config=config, db_obj=db_obj, ts_delivery_list=ts_delivery_list,
+                                                    path_sim=sim_path)
+                        t_settle_market_end_db = time.time()
+                        t_settle_market_db = t_settle_market_end_db - t_settle_market_start_db
+                        result_dict["timing"]["db"]["settle_market"].loc[sample, n_positions] = t_settle_market_db
+                        # Full computation time ###
+                        t_full_market_db = t_post_positions_db + t_clear_market_db + t_log_meter_readings_db + t_settle_market_db
+                        result_dict["timing"]["db"]["full_market"].loc[sample, n_positions] = t_full_market_db
+                        print(f"Central LEM successfully cleared {n_positions} positions in {t_full_market_db} s.")
 
-                #############################
-                # Blockchain LEM ############
-                #############################
-                try:
-                    # convert energy qualities from string to int
-                    positions = test_utils._convert_qualities_to_int(db_obj, positions, config['lem']['types_quality'])
-                    t_post_positions_start_bc = time.time()
-                    _, gas_consumption_pp = bc_obj_clearing_ex_ante.push_all_positions(
-                        positions, temporary=True, permanent=False)
-                    result_dict["gas_consumption"]["post_positions"].loc[sample, n_positions] = gas_consumption_pp
-                    t_post_positions_end_bc = time.time()
-                    t_post_positions_bc = t_post_positions_end_bc - t_post_positions_start_bc
-                    result_dict["timing"]["bc"]["post_positions"].loc[sample, n_positions] = t_post_positions_bc
-                    # Clear market ex ante ###
-                    t_clear_market_start_bc = time.time()
-                    gas_consumption_cm = bc_obj_clearing_ex_ante.market_clearing_ex_ante(
-                        config["lem"], config_retailer=config_retailer,
-                        t_override=t_override, shuffle=shuffle, verbose=verbose)
-                    result_dict["gas_consumption"]["clear_market"].loc[sample, n_positions] = gas_consumption_cm
-                    t_clear_market_end_bc = time.time()
-                    t_clear_market_bc = t_clear_market_end_bc - t_clear_market_start_bc
-                    result_dict["timing"]["bc"]["clear_market"].loc[sample, n_positions] = t_clear_market_bc
-                    # Log meter readings to LEM ###
-                    t_log_meter_readings_start_bc = time.time()
-                    _, gas_consumption_lmr = bc_obj_settlement.log_meter_readings_delta(simulated_meter_readings_delta)
-                    result_dict["gas_consumption"]["log_meter_readings"].loc[sample, n_positions] = gas_consumption_lmr
-                    t_log_meter_readings_end_bc = time.time()
-                    t_log_meter_readings_bc = t_log_meter_readings_end_bc - t_log_meter_readings_start_bc
-                    result_dict["timing"]["bc"]["log_meter_readings"].loc[sample, n_positions] = t_log_meter_readings_bc
-                    # Settle market ###
-                    t_settle_market_start_bc = time.time()
-                    gas_consumption_sm = test_utils.settle_market_bc(config=config,
-                                                                     bc_obj_settlement=bc_obj_settlement,
-                                                                     ts_delivery_list=ts_delivery_list)
-                    result_dict["gas_consumption"]["settle_market"].loc[sample, n_positions] = gas_consumption_sm
-                    t_settle_market_end_bc = time.time()
-                    t_settle_market_bc = t_settle_market_end_bc - t_settle_market_start_bc
-                    result_dict["timing"]["bc"]["settle_market"].loc[sample, n_positions] = t_settle_market_bc
-                    # Full market clearing ###
-                    t_full_market_bc = t_post_positions_bc + t_clear_market_bc + t_log_meter_readings_bc + t_settle_market_bc
-                    gas_consumption_all = gas_consumption_pp + gas_consumption_cm + gas_consumption_lmr + gas_consumption_sm
-                    result_dict["gas_consumption"]["full_market"].loc[sample, n_positions] = gas_consumption_all
-                    result_dict["timing"]["bc"]["full_market"].loc[sample, n_positions] = t_full_market_bc
-                    print(f"Blockchain LEM successfully cleared {n_positions} positions in {t_full_market_bc} s.")
-                except Exception as e:
-                    print(e)
-                    result_dict["exception"]["bc"][sample] = e
-                    break
+                        #############################
+                        # Blockchain LEM ############
+                        #############################
+                        # convert energy qualities from string to int
+                        positions = test_utils._convert_qualities_to_int(db_obj, positions, config['lem']['types_quality'])
+                        t_post_positions_start_bc = time.time()
+                        _, gas_consumption_pp = bc_obj_clearing_ex_ante.push_all_positions(
+                            positions, temporary=True, permanent=False)
+                        result_dict["gas_consumption"]["post_positions"].loc[sample, n_positions] = gas_consumption_pp
+                        t_post_positions_end_bc = time.time()
+                        t_post_positions_bc = t_post_positions_end_bc - t_post_positions_start_bc
+                        result_dict["timing"]["bc"]["post_positions"].loc[sample, n_positions] = t_post_positions_bc
+                        # Clear market ex ante ###
+                        t_clear_market_start_bc = time.time()
+                        gas_consumption_cm = bc_obj_clearing_ex_ante.market_clearing_ex_ante(
+                            config["lem"], config_retailer=config_retailer,
+                            t_override=t_override, shuffle=shuffle, verbose=verbose)
+                        result_dict["gas_consumption"]["clear_market"].loc[sample, n_positions] = gas_consumption_cm
+                        t_clear_market_end_bc = time.time()
+                        t_clear_market_bc = t_clear_market_end_bc - t_clear_market_start_bc
+                        result_dict["timing"]["bc"]["clear_market"].loc[sample, n_positions] = t_clear_market_bc
+                        # Log meter readings to LEM ###
+                        t_log_meter_readings_start_bc = time.time()
+                        _, gas_consumption_lmr = bc_obj_settlement.log_meter_readings_delta(simulated_meter_readings_delta)
+                        result_dict["gas_consumption"]["log_meter_readings"].loc[sample, n_positions] = gas_consumption_lmr
+                        t_log_meter_readings_end_bc = time.time()
+                        t_log_meter_readings_bc = t_log_meter_readings_end_bc - t_log_meter_readings_start_bc
+                        result_dict["timing"]["bc"]["log_meter_readings"].loc[sample, n_positions] = t_log_meter_readings_bc
+                        # Settle market ###
+                        t_settle_market_start_bc = time.time()
+                        gas_consumption_sm = test_utils.settle_market_bc(config=config,
+                                                                         bc_obj_settlement=bc_obj_settlement,
+                                                                         ts_delivery_list=ts_delivery_list)
+                        result_dict["gas_consumption"]["settle_market"].loc[sample, n_positions] = gas_consumption_sm
+                        t_settle_market_end_bc = time.time()
+                        t_settle_market_bc = t_settle_market_end_bc - t_settle_market_start_bc
+                        result_dict["timing"]["bc"]["settle_market"].loc[sample, n_positions] = t_settle_market_bc
+                        # Full market clearing ###
+                        t_full_market_bc = t_post_positions_bc + t_clear_market_bc + t_log_meter_readings_bc + t_settle_market_bc
+                        gas_consumption_all = gas_consumption_pp + gas_consumption_cm + gas_consumption_lmr + gas_consumption_sm
+                        result_dict["gas_consumption"]["full_market"].loc[sample, n_positions] = gas_consumption_all
+                        result_dict["timing"]["bc"]["full_market"].loc[sample, n_positions] = t_full_market_bc
+                        print(f"Blockchain LEM successfully cleared {n_positions} positions in {t_full_market_bc} s.")
+                        success = True
+
+                    except Exception as e:
+                        # Restart openethereum node
+                        restart_openethereum_node(path_toml_file=path_openethereum_toml)
+                        n_restarts += 1
+                        if n_restarts >= max_n_restarts:
+                            raise e
 
                 # Check equality of db and bc entries
                 result_dict["equality_check"]["user_info"].loc[sample, n_positions] = test_user_info(
@@ -253,10 +259,13 @@ def compute_performance_analysis(path_results=None, exception_handler=None):
 
                 save_results(result_dict=result_dict, path_results=path_results)
 
+        kill_process_by_name("openethereum")
+
     except Exception as e:
         exception_handler.send_msg(message=f"Exception: BC-Performance-Analysis "
-                                           f"\nSample #{sample} and {n_positions} inserted positions. "
+                                           f"\nSample #{sample} with {n_positions} positions. "
                                            f"\n{str(e)}")
+        kill_process_by_name("openethereum")
         raise e
 
     return result_dict
@@ -494,8 +503,11 @@ if __name__ == '__main__':
         {'bot_token': config['telegram']['bot_token'], 'chat_ids': config['telegram']['chat_ids']})
     # Create result folder
     path_result_folder = create_results_folder(path_results="evaluation_results")
+    path_openethereum_toml = "/home/ebl-authority2/oeEBL/oeEBL.toml"
     # Compute performance analysis
-    results = compute_performance_analysis(path_results=path_result_folder, exception_handler=telegram_sender)
+    results = compute_performance_analysis(path_results=path_result_folder,
+                                           exception_handler=telegram_sender,
+                                           path_openethereum_toml=path_openethereum_toml)
     # Save results to files
     save_results(results, path_result_folder)
     # # path_result_folder = "evaluation_results/2021_11_21_13_22_24"

@@ -15,7 +15,7 @@ from current_scenario_file import scenario_file_path
 
 def setup_test_general(generate_random_test_data=False, test_config_path=None):
     if test_config_path is None:
-        test_config_path = scenario_file_path
+        test_config_path = "./sim_test_config.yaml"
 
     # load configuration file
     with open(f"" + test_config_path) as config_file:

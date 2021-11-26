@@ -486,7 +486,7 @@ db_connections:
                "tx_timeout": 600,
                "network_id": 8995,
                "contract_name": "ClearingExAnte",
-               "path_abi": "../truffle/build/contracts"}
+               "path_abi": "../truffle/build/contracts/"}
 
 
 
@@ -500,9 +500,10 @@ db_connections:
 bc_performance_analysis:
   "n_prosumers": 100                        # number of prosumers on platform
   "n_positions": {"min": 50,
-                  "max": 151,
+                  "max": 551,
                   "increment": 50}          # range of inserted market positions in analysis
   "n_ts_delivery": 1                        # number of time of deliveries to be simulated in positions
   "max_number_positions_ts_d": 999           # in order to omit collisions this number should be at leas.
-  "n_samples": 2                            # number of samples
+  "n_samples": 10                            # number of samples
+  "max_n_restart_node": 10                  # max number of restarts of the openethereum node, afterwards raises exception
 

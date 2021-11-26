@@ -36,8 +36,7 @@ class BlockchainConnection:
 
             self.bc_param = bc_param
         except Exception as e:
-            print(e)
-            assert False
+            raise e
 
     ###################################################
     # Functions for the info_user table
