@@ -3,10 +3,12 @@ import time
 import yaml
 import json
 import test_utils
+import tikzplotlib
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 from telegram_connector_class import SenderTelegram
 from lemlab.lem import clearing_ex_ante
 from bc_test_settlement import test_meter_info, test_user_info, test_meter_readings, test_prices_settlement, \
@@ -102,12 +104,11 @@ def compute_performance_analysis(path_results=None, exception_handler=None, path
                                                            bc_obj_settlement=bc_obj_settlement)
 
                         # Insert users to db and bc with grid meters for settlement
-                        ids_users, ids_meters, ids_market_agents = test_utils.setup_random_prosumers(db_obj=db_obj,
-                                                                                                     bc_obj_market=bc_obj_clearing_ex_ante,
-                                                                                                     n_prosumers=
-                                                                                                     config[
-                                                                                                         "bc_performance_analysis"][
-                                                                                                         "n_prosumers"])
+                        ids_users, ids_meters, ids_market_agents = \
+                            test_utils.setup_random_prosumers(db_obj=db_obj,
+                                                              bc_obj_market=bc_obj_clearing_ex_ante,
+                                                              n_prosumers=
+                                                              config["bc_performance_analysis"]["n_prosumers"])
                         # Compute random market positions
                         positions = test_utils.create_random_positions(db_obj=db_obj,
                                                                        config=config,
@@ -142,14 +143,16 @@ def compute_performance_analysis(path_results=None, exception_handler=None, path
                         t_clear_market_db = t_clear_market_end_db - t_clear_market_start_db
                         result_dict["timing"]["db"]["clear_market"].loc[sample, n_positions] = t_clear_market_db
                         # Simulate meter readings from market results with random errors for settlement
-                        simulated_meter_readings_delta, ts_delivery_list = test_utils.simulate_meter_readings_from_market_results(
-                            db_obj=db_obj, rand_percent_var=15)
+                        simulated_meter_readings_delta, ts_delivery_list = \
+                            test_utils.simulate_meter_readings_from_market_results(
+                                db_obj=db_obj, rand_percent_var=15)
                         # Log meter readings to LEM ###
                         t_log_meter_readings_start_db = time.time()
                         db_obj.log_readings_meter_delta(simulated_meter_readings_delta)
                         t_log_meter_readings_end_db = time.time()
                         t_log_meter_readings_db = t_log_meter_readings_end_db - t_log_meter_readings_start_db
-                        result_dict["timing"]["db"]["log_meter_readings"].loc[sample, n_positions] = t_log_meter_readings_db
+                        result_dict["timing"]["db"]["log_meter_readings"].loc[
+                            sample, n_positions] = t_log_meter_readings_db
                         # Settle market ###
                         t_settle_market_start_db = time.time()
                         test_utils.settle_market_db(config=config, db_obj=db_obj, ts_delivery_list=ts_delivery_list,
@@ -158,7 +161,8 @@ def compute_performance_analysis(path_results=None, exception_handler=None, path
                         t_settle_market_db = t_settle_market_end_db - t_settle_market_start_db
                         result_dict["timing"]["db"]["settle_market"].loc[sample, n_positions] = t_settle_market_db
                         # Full computation time ###
-                        t_full_market_db = t_post_positions_db + t_clear_market_db + t_log_meter_readings_db + t_settle_market_db
+                        t_full_market_db = t_post_positions_db + t_clear_market_db + t_log_meter_readings_db + \
+                                           t_settle_market_db
                         result_dict["timing"]["db"]["full_market"].loc[sample, n_positions] = t_full_market_db
                         print(f"Central LEM successfully cleared {n_positions} positions in {t_full_market_db} s.")
 
@@ -166,7 +170,8 @@ def compute_performance_analysis(path_results=None, exception_handler=None, path
                         # Blockchain LEM ############
                         #############################
                         # convert energy qualities from string to int
-                        positions = test_utils._convert_qualities_to_int(db_obj, positions, config['lem']['types_quality'])
+                        positions = test_utils._convert_qualities_to_int(db_obj, positions,
+                                                                         config['lem']['types_quality'])
                         t_post_positions_start_bc = time.time()
                         _, gas_consumption_pp = bc_obj_clearing_ex_ante.push_all_positions(
                             positions, temporary=True, permanent=False)
@@ -185,11 +190,14 @@ def compute_performance_analysis(path_results=None, exception_handler=None, path
                         result_dict["timing"]["bc"]["clear_market"].loc[sample, n_positions] = t_clear_market_bc
                         # Log meter readings to LEM ###
                         t_log_meter_readings_start_bc = time.time()
-                        _, gas_consumption_lmr = bc_obj_settlement.log_meter_readings_delta(simulated_meter_readings_delta)
-                        result_dict["gas_consumption"]["log_meter_readings"].loc[sample, n_positions] = gas_consumption_lmr
+                        _, gas_consumption_lmr = bc_obj_settlement.log_meter_readings_delta(
+                            simulated_meter_readings_delta)
+                        result_dict["gas_consumption"]["log_meter_readings"].loc[
+                            sample, n_positions] = gas_consumption_lmr
                         t_log_meter_readings_end_bc = time.time()
                         t_log_meter_readings_bc = t_log_meter_readings_end_bc - t_log_meter_readings_start_bc
-                        result_dict["timing"]["bc"]["log_meter_readings"].loc[sample, n_positions] = t_log_meter_readings_bc
+                        result_dict["timing"]["bc"]["log_meter_readings"].loc[
+                            sample, n_positions] = t_log_meter_readings_bc
                         # Settle market ###
                         t_settle_market_start_bc = time.time()
                         gas_consumption_sm = test_utils.settle_market_bc(config=config,
@@ -200,8 +208,10 @@ def compute_performance_analysis(path_results=None, exception_handler=None, path
                         t_settle_market_bc = t_settle_market_end_bc - t_settle_market_start_bc
                         result_dict["timing"]["bc"]["settle_market"].loc[sample, n_positions] = t_settle_market_bc
                         # Full market clearing ###
-                        t_full_market_bc = t_post_positions_bc + t_clear_market_bc + t_log_meter_readings_bc + t_settle_market_bc
-                        gas_consumption_all = gas_consumption_pp + gas_consumption_cm + gas_consumption_lmr + gas_consumption_sm
+                        t_full_market_bc = t_post_positions_bc + t_clear_market_bc + t_log_meter_readings_bc + \
+                                           t_settle_market_bc
+                        gas_consumption_all = gas_consumption_pp + gas_consumption_cm + gas_consumption_lmr + \
+                                              gas_consumption_sm
                         result_dict["gas_consumption"]["full_market"].loc[sample, n_positions] = gas_consumption_all
                         result_dict["timing"]["bc"]["full_market"].loc[sample, n_positions] = t_full_market_bc
                         print(f"Blockchain LEM successfully cleared {n_positions} positions in {t_full_market_bc} s.")
@@ -224,10 +234,11 @@ def compute_performance_analysis(path_results=None, exception_handler=None, path
                     n_positions=n_positions, path_results=path_results)
 
                 result_dict["equality_check"]["market_results"].loc[
-                    sample, n_positions] = test_clearing_results_ex_ante(db_obj=db_obj,
-                                                                         bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante,
-                                                                         n_sample=sample, n_positions=n_positions,
-                                                                         path_results=path_results)
+                    sample, n_positions] = \
+                    test_clearing_results_ex_ante(db_obj=db_obj,
+                                                  bc_obj_clearing_ex_ante=bc_obj_clearing_ex_ante,
+                                                  n_sample=sample, n_positions=n_positions,
+                                                  path_results=path_results)
 
                 result_dict["equality_check"]["meter_readings"].loc[sample, n_positions] = test_meter_readings(
                     db_obj=db_obj, bc_obj_settlement=bc_obj_settlement,
@@ -279,17 +290,26 @@ def plot_time_complexity_analysis(db_timings, bc_timings, path_results=None, onl
     if only_full_market:
         key = "full_market"
         df = db_timings["full_market"]
+        x_values = [int(x) for x in df.columns]
         if reference:
             reference_value = df.iloc[:, 0].mean()
         y_error = [df.max() - df.mean(), df.mean() - df.min()]
-        ax.errorbar(x=df.columns, y=df.mean() / reference_value, yerr=[e / reference_value for e in y_error],
+        ax.errorbar(x=x_values, y=df.mean() / reference_value, yerr=[e / reference_value for e in y_error],
                     marker="x",
                     label="db: " + key.replace("_", " "))
+        # Calculate fitting lines
+        a_db, b_db, c_db = np.polyfit(x=x_values, y=df.mean() / reference_value, deg=2)
+        ax.plot(x_values, [a_db * x ^ 2 + b_db * x + c_db for x in x_values], linestyle="dashed",
+                label=f"DB linear fit: m = {round(a_db, 2)} and b = {round(b_db, 2)}")
         df = bc_timings["full_market"]
         y_error = [df.max() - df.mean(), df.mean() - df.min()]
-        ax.errorbar(x=df.columns, y=df.mean() / reference_value, yerr=[e / reference_value for e in y_error],
+        ax.errorbar(x=x_values, y=df.mean() / reference_value, yerr=[e / reference_value for e in y_error],
                     marker="x",
                     label="bc: " + key.replace("_", " "))
+        # Calculate fitting lines
+        a_bc, b_bc, c_bc = np.polyfit(x=x_values, y=df.mean() / reference_value, deg=2)
+        ax.plot(x_values, [a_bc * x ^ 2 + b_bc * x + c_bc for x in x_values], linestyle="dashed",
+                label=f"BC linear fit: m = {round(a_bc, 2)} and b = {round(b_bc, 2)}")
     else:
         if reference:
             reference_value = db_timings["post_positions"].iloc[:, 0].mean()
@@ -318,44 +338,77 @@ def plot_time_complexity_analysis(db_timings, bc_timings, path_results=None, onl
         plt.close()
 
 
-def plot_time_complexity_analysis_box(db_timings, bc_timings, path_results=None, only_full_market=False, reference=None,
-                                      show=True):
+def plot_time_complexity_analysis_box(results, path_results=None, reference=None, show=True):
     reference_value = 1
-    fig = plt.figure()
+    fig = plt.figure(figsize=[7, 5])
     ax = plt.subplot(111)
-    if only_full_market:
-        key = "full_market"
-        df = db_timings["full_market"]
-        if reference:
-            reference_value = df.iloc[:, 0].mean()
-        bp1 = ax.boxplot(df, "blue")
-        df = bc_timings["full_market"]
-        bp2 = ax.boxplot(df, "orange")
-    else:
-        if reference:
-            reference_value = db_timings["post_positions"].iloc[:, 0].mean()
-        for key, df in db_timings.items():
-            y_error = [df.max() - df.mean(), df.mean() - df.min()]
-            ax.errorbar(x=df.columns, y=df.mean() / reference_value, yerr=[e / reference_value for e in y_error],
-                        marker="x", label="db: " + key.replace("_", " "))
-        for key, df in bc_timings.items():
-            y_error = [df.max() - df.mean(), df.mean() - df.min()]
-            ax.errorbar(x=df.columns, y=df.mean() / reference_value, yerr=[e / reference_value for e in y_error],
-                        marker="x", label="bc: " + key.replace("_", " "))
+    df = results["timing"]["db"]["full_market"]
+    x_values = [int(x) for x in df.columns]
+    if reference:
+        reference_value = df.iloc[:, 0].mean()
+    c = "#228B22"
+    bp0 = ax.boxplot(df / reference_value, positions=x_values, widths=20, manage_ticks=False, patch_artist=True,
+                     boxprops=dict(facecolor="#F5F5F5", color=c),
+                     capprops=dict(color=c),
+                     whiskerprops=dict(color=c),
+                     medianprops=dict(color="#006400"),
+                     flierprops=dict(markeredgecolor="#006400", markerfacecolor="#B4EEB4"),
+                     showfliers=True)  # ,
+    # whis=(0, 100))
+    # Calculate fitting lines
+    coeff_db, residuals_db, _, _, _ = np.polyfit(x=x_values, y=df.mean() / reference_value, deg=2, full=True)
+    lp0 = ax.plot(x_values, [np.polyval(coeff_db, x) / reference_value for x in x_values], linestyle="dotted",
+                  color="#2BCE48")
+    df = results["timing"]["bc"]["full_market"]
+    c = "#68228B"
+    bp2 = ax.boxplot(df / reference_value, positions=x_values, widths=20, manage_ticks=False, patch_artist=True,
+                     boxprops=dict(facecolor="#F5F5F5", color=c),
+                     capprops=dict(color=c),
+                     whiskerprops=dict(color=c),
+                     medianprops=dict(color="#8A2BE2"),
+                     flierprops=dict(markeredgecolor="#8A2BE2", markerfacecolor="#EEAEEE"),
+                     showfliers=True)  # ,
+    # whis=(0, 100))  # , positions=x_values, widths=20, manage_ticks=True)
+    # Calculate fitting lines
+    coeff_bc, residuals_bc, _, _, _ = np.polyfit(x=x_values, y=df.mean() / reference_value, deg=2, full=True)
+    lp1 = ax.plot(x_values, [np.polyval(coeff_bc, x) / reference_value for x in x_values],
+                  linestyle="dotted", color="#BF3EFF")
+    ax.set_xticks(x_values)
+    ax.set_xticklabels(df.columns)
     ax.grid()
     ax.set_yscale("log")
-    ax.set_ylabel("Computational effort in relation to a full market clearing\nwith 50 bids on a central database")
+    ax.set_ylabel("Computation time in s")
     ax.set_xlabel("Number of inserted buy and ask bids")
+    ax2 = ax.twinx()
+    mp0 = ax2.plot(x_values, results["timing"]["ratios"]["full_market"], color="#FF6103", linestyle="None", marker="d")
+    coeff_ratio, residuals_ratio, _, _, _ = np.polyfit(x=x_values,
+                                                       y=results["timing"]["ratios"]["full_market"] / reference_value,
+                                                       deg=1, full=True)
+    lp2 = ax2.plot(x_values, [np.polyval(coeff_ratio, x) / reference_value for x in x_values],
+                   linestyle="dashed", color="#FF6103")
+    ax2.set_ylabel('Ratio of mean centralized to\nblockchain computation times', color="#FF6103")
+    ax2.set_ylim([0, 600])
     # Shrink current axis by 20%
     box = ax.get_position()
-    ax.set_position([box.x0, box.y0, box.width, box.height])
+    ax.set_position([box.x0, box.y0, box.width * 0.95, box.height])
     # Put a legend to the right of the current axis
-    ax.legend([bp1["boxes"][0], bp2["boxes"][0]], ['Blockchain LEM', 'Central database LEM'],
-              loc='center left', bbox_to_anchor=(0.15, 1.05), frameon=False, ncol=2)
-    ax.set_xticks(range(1, len(df.columns) + 1))
-    ax.set_xticklabels(df.columns)
+    f = mticker.ScalarFormatter(useOffset=False, useMathText=True)
+    g = lambda x, pos: "${}$".format(f._formatSciNotation('%1.1e' % x))
+    fmt = mticker.FuncFormatter(g)
+    leg = ax.legend([bp0["caps"][0], bp2["caps"][0], lp2[0]],
+                    ['Central LEM',
+                     # "Linear fit: m = {}".format(fmt(m_db)) + ", b = {}".format(fmt(b_db)),
+                     # "$x^2$-fit: a={}".format(fmt(a_db)) + ", b={}".format(fmt(b_db)) + ", c={}".format(fmt(c_db)),
+                     'Blockchain LEM',
+                     # "Linear fit: m = {}".format(fmt(m_bc)) + ", b = {}".format(fmt(b_bc)),
+                     # "$x^2$-fit: a={}".format(fmt(a_bc)) + ", b={}".format(fmt(b_bc)) + ", c={}".format(fmt(c_bc))
+                     "Ratio"
+                     ],
+                    loc='center left', bbox_to_anchor=(0.11, 1.08), frameon=False, ncol=3)
+    [line.set_linewidth(3) for line in leg.get_lines()]
     if path_results is not None:
         fig.savefig(f"{path_results}/figures/timing_results_boxplot.svg")
+        tikzplotlib.save(f"{path_results}/figures/timing_results_boxplot.tex")
     if show:
         plt.show()
     else:
@@ -364,37 +417,32 @@ def plot_time_complexity_analysis_box(db_timings, bc_timings, path_results=None,
 
 def plot_time_complexity_distributions(db_timings, bc_timings, path_results=None, show=True):
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-    norm = db_timings["full_market"].mean() / 100
+    norm_db = db_timings["full_market"].mean() / 100
     l1 = ax1.stackplot(db_timings["full_market"].columns,
-                       db_timings["post_positions"].mean() / norm,
-                       db_timings["clear_market"].mean() / norm,
-                       db_timings["log_meter_readings"].mean() / norm,
-                       db_timings["settle_market"].mean() / norm,
-                       labels=["post_positions", "clear_market", "log_meter_readings", "settle_market"]
+                       db_timings["post_positions"].mean() / norm_db,
+                       db_timings["clear_market"].mean() / norm_db,
+                       db_timings["log_meter_readings"].mean() / norm_db,
+                       db_timings["settle_market"].mean() / norm_db,
+                       labels=["Posting bids", "Market clearing", "Logging meter readings", "Market settlement"]
                        )
-    ax1.set_ylabel("Share of computation effort in %")
+    ax1.set_ylabel("Share of computation time in %")
     ax1.set_xlabel("Number of inserted buy and ask bids")
-    ax1.set_title("Central database LEM")
+    ax1.set_title("Central LEM")
 
-    norm = bc_timings["full_market"].mean() / 100
+    norm_bc = bc_timings["full_market"].mean() / 100
     l2 = ax2.stackplot(bc_timings["full_market"].columns,
-                       bc_timings["post_positions"].mean() / norm,
-                       bc_timings["clear_market"].mean() / norm,
-                       bc_timings["log_meter_readings"].mean() / norm,
-                       bc_timings["settle_market"].mean() / norm
+                       bc_timings["post_positions"].mean() / norm_bc,
+                       bc_timings["clear_market"].mean() / norm_bc,
+                       bc_timings["log_meter_readings"].mean() / norm_bc,
+                       bc_timings["settle_market"].mean() / norm_bc
                        )
     ax2.set_xlabel("Number of inserted buy and ask bids")
     ax2.set_title("Blockchain LEM")
-    box = ax1.get_position()
-    ax1.set_position([box.x0, box.y0, box.width, box.height * 0.9])
-    # Put a legend to the right of the current axis
-    # ax.legend(loc='center left', bbox_to_anchor=(0.15, 1.05), frameon=False, ncol=2)
-
-    fig.legend(l1, labels=["post_positions", "clear_market", "log_meter_readings", "settle_market"],
-               loc="center left", frameon=False, bbox_to_anchor=(0.2, 0.05), ncol=4)
-    plt.subplots_adjust(bottom=0.18)
+    fig.legend(loc="center", frameon=False, bbox_to_anchor=(0.5, 0.03), ncol=4)
+    plt.subplots_adjust(left=0.05, top=0.95, wspace=0.1, right=0.98, bottom=0.15)
     if path_results is not None:
         fig.savefig(f"{path_results}/figures/computation_distribution.svg")
+        tikzplotlib.save(f"{path_results}/figures/computation_distribution.tex")
     if show:
         plt.show()
     else:
@@ -423,6 +471,53 @@ def plot_gas_consumption(gas_consumption_dict, path_results=None, show=True):
     leg1._legend_box.stale = True
     if path_results is not None:
         fig.savefig(f"{path_results}/figures/gas_consumption.svg")
+        # tikzplotlib.save(f"{path_results}/figures/gas_consumption.tex")
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+
+def plot_gas_consumption_box(gas_consumption_dict, path_results=None, show=True, color_dict=None):
+    fig = plt.figure(figsize=[7, 5])
+    ax = plt.subplot(111)
+    if color_dict is None:
+        color_dict = {"post_positions": "blue", "clear_market": "orange", "log_meter_readings": "green",
+                      "settle_market": "red", "full_market": "black"}
+    plot_dict = {}
+    for key, df in gas_consumption_dict.items():
+        plot_dict[key] = {}
+        df = gas_consumption_dict[key]
+        x_values = [int(x) for x in df.columns]
+        c = color_dict[key]
+        bp = ax.boxplot(df, positions=x_values, widths=20, manage_ticks=False, patch_artist=True,
+                        boxprops=dict(facecolor=c, color=c, alpha=0.3),
+                        capprops=dict(color=c),
+                        whiskerprops=dict(color=c),
+                        medianprops=dict(color=c),
+                        flierprops=dict(markeredgecolor=c, markerfacecolor=c),
+                        showfliers=True)  # ,
+        # Calculate fitting lines
+        coeff_db, residuals_db, _, _, _ = np.polyfit(x=x_values, y=df.mean(), deg=2, full=True)
+        lp = ax.plot(x_values, [np.polyval(coeff_db, x) for x in x_values], linestyle="dotted", color=c)
+        plot_dict[key]["bp"] = bp
+        plot_dict[key]["lp"] = lp
+
+    ax.set_xticks(x_values)
+    ax.set_xticklabels(df.columns)
+    ax.grid()
+    ax.set_yscale("log")
+    ax.set_ylabel("Computational effort in Ethereum's \"Gas\"")
+    ax.set_xlabel("Number of inserted buy and ask bids")
+    # Shrink current axis by 20%
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width, box.height])
+    leg = ax.legend([plot_dict[key]["bp"]["caps"][0] for key, plot in plot_dict.items()], plot_dict.keys(),
+                    loc='center left', bbox_to_anchor=(0, 1.08), frameon=False, ncol=3)
+    [line.set_linewidth(3) for line in leg.get_lines()]
+    if path_results is not None:
+        fig.savefig(f"{path_results}/figures/gas_consumption_box.svg")
+        tikzplotlib.save(f"{path_results}/figures/gas_consumption_box.tex")
     if show:
         plt.show()
     else:
@@ -443,6 +538,15 @@ def plot_equality_check(equality_check_dict, path_results=None, show=True):
             plt.show()
         else:
             plt.close()
+
+
+def calc_ratios(results):
+    results["timing"]["ratios"] = pd.DataFrame(index=list(results['timing']['db']['full_market'].columns),
+                                               columns=list(results['timing']['db'].keys()))
+    for key, df in results['timing']['db'].items():
+        results["timing"]["ratios"][key] = results["timing"]["bc"][key].mean() / results["timing"]["db"][key].mean()
+
+    return results
 
 
 def create_results_folder(path_results):
@@ -495,31 +599,36 @@ def load_results(path_result_folder):
 
 
 if __name__ == '__main__':
-    # load telegram configuration
-    with open(f"telegram_config.yaml") as config_file:
-        config = yaml.load(config_file, Loader=yaml.FullLoader)
-    # Create sender object
-    telegram_sender = SenderTelegram(
-        {'bot_token': config['telegram']['bot_token'], 'chat_ids': config['telegram']['chat_ids']})
-    # Create result folder
-    path_result_folder = create_results_folder(path_results="evaluation_results")
-    path_openethereum_toml = "/home/ebl-authority2/oeEBL/oeEBL.toml"
-    # Compute performance analysis
-    results = compute_performance_analysis(path_results=path_result_folder,
-                                           exception_handler=telegram_sender,
-                                           path_openethereum_toml=path_openethereum_toml)
-    # Save results to files
-    save_results(results, path_result_folder)
-    # # path_result_folder = "evaluation_results/2021_11_21_13_22_24"
-    # path_result_folder = "H:/Dissertation/Local Energy Markets/Solidity toolbox for LEMs/2021_11_21_23_30_29"
+    # # load telegram configuration
+    # with open(f"telegram_config.yaml") as config_file:
+    #     config = yaml.load(config_file, Loader=yaml.FullLoader)
+    # # Create sender object
+    # telegram_sender = SenderTelegram(
+    #     {'bot_token': config['telegram']['bot_token'], 'chat_ids': config['telegram']['chat_ids']})
+    # # Create result folder
+    # path_result_folder = create_results_folder(path_results="evaluation_results")
+    # path_openethereum_toml = "C:\\Users\\ga47num\\oe_EBL\\oeEBL_user.toml"
+    # # Compute performance analysis
+    # results = compute_performance_analysis(path_results=path_result_folder,
+    #                                        exception_handler=telegram_sender,
+    #                                        path_openethereum_toml=path_openethereum_toml)
+    # # Save results to files
+    # save_results(results, path_result_folder)
+    # # # path_result_folder = "evaluation_results/2021_11_21_13_22_24"
+    path_result_folder = "H:/Dissertation/Local Energy Markets/Solidity toolbox for LEMs/2021_11_25_19_01_16"
     # Load data from previous analysis
     results = load_results(path_result_folder=path_result_folder)
+    # Calculate ratios
+    results = calc_ratios(results)
     # Plot results
-    plot_time_complexity_analysis(results["timing"]["db"], results["timing"]["bc"], path_results=path_result_folder,
-                                  only_full_market=True, reference=True)
-    plot_time_complexity_analysis_box(results["timing"]["db"], results["timing"]["bc"], path_results=path_result_folder,
-                                      only_full_market=True, reference=True)
-    plot_time_complexity_distributions(db_timings=results["timing"]["db"], bc_timings=results["timing"]["bc"],
-                                       path_results=path_result_folder)
+
+    color_dict = {"post_positions": "blue", "clear_market": "orange", "log_meter_readings": "green",
+                  "settle_market": "red", "full_market": "black"}
+    # plot_time_complexity_analysis(results["timing"]["db"], results["timing"]["bc"], path_results=path_result_folder,
+    #                               only_full_market=True, reference=True)
+    # plot_time_complexity_analysis_box(results, path_results=path_result_folder, reference=False, show=True)
+    # plot_time_complexity_distributions(db_timings=results["timing"]["db"], bc_timings=results["timing"]["bc"],
+    #                                    path_results=path_result_folder)
     plot_gas_consumption(results["gas_consumption"], path_results=path_result_folder)
-    plot_equality_check(results["equality_check"], path_results=path_result_folder)
+    plot_gas_consumption_box(results["gas_consumption"], path_results=path_result_folder, color_dict=color_dict)
+    # plot_equality_check(results["equality_check"], path_results=path_result_folder)

@@ -472,13 +472,13 @@ db_connections:
                                  "pw": "admin",
                                  "host": "129.187.90.187",
                                  "port": "5432",
-                                 "db": "postgres" }
+                                 "db": "MZ_Test" }
 
   "database_connection_user": { "user": "market_participant",
                                 "pw": "user",
                                 "host": "129.187.90.187",
                                 "port": "5432",
-                                "db": "postgres" }
+                                "db": "MZ_Test" }
 
   "bc_dict": { "host": "localhost",
                "port": "8540",
