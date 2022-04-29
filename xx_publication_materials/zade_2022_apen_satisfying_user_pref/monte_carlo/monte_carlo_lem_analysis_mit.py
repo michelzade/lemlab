@@ -98,7 +98,7 @@ def run_clearings(db_obj,
                             bids=bids_uncleared,
                             type_clearing=type_clearing,
                             type_prioritization='h2l')
-            positions_cleared = positions_cleared.append(results_pp).reset_index(drop=True)
+            positions_cleared = pd.concat([positions_cleared, results_pp]).reset_index(drop=True)
 
     # Combinations WITH consideration of quality premium ###
     # Standard da AFTER advanced clearing
@@ -122,7 +122,7 @@ def run_clearings(db_obj,
                             type_clearing=type_clearing,
                             add_premium=True,
                             type_prioritization='h2l')
-            positions_cleared = positions_cleared.append(results_pp).reset_index(drop=True)
+            positions_cleared = pd.concat([positions_cleared, results_pp]).reset_index(drop=True)
 
             positions_cleared_da, offers_uncleared_da, bids_uncleared_da, offers_cleared_da, bids_cleared_da = \
                 clearing_pda(db_obj,
@@ -131,7 +131,7 @@ def run_clearings(db_obj,
                              bids_uncleared_pp,
                              add_premium=False, )
 
-            positions_cleared = positions_cleared.append(positions_cleared_da, ignore_index=True)
+            positions_cleared = pd.concat([positions_cleared, positions_cleared_da], ignore_index=True)
 
     if not positions_cleared.empty and config_lem['share_quality_logging_extended']:
         positions_cleared = calc_market_position_shares(db_obj, config_lem, offers, bids, positions_cleared)
@@ -898,12 +898,11 @@ if __name__ == '__main__':
                 positions_matched = pd.read_feather(path=f'{path_output}/{clearing}/{trial}/{result_name}')
                 positions_placed = pd.read_feather(path=f'{path_input}/{trial}/{result_name}')
                 # Extracts all relevant data fields from cleared positions
-                df_iterations = df_iterations.append(extract_relevant_data(config_mc,
-                                                                           positions_matched,
-                                                                           positions_placed),
-                                                     ignore_index=True)
+                df_iterations = pd.concat([df_iterations,
+                                           extract_relevant_data(config_mc, positions_matched, positions_placed)],
+                                          ignore_index=True)
             # Calculates mean of all iterations
-            df_trials = df_trials.append(df_iterations.mean().to_frame().T)
+            df_trials = pd.concat([df_trials, df_iterations.mean().to_frame().T])
         # calculates mean and std of all trials
         df_mean = df_trials.mean().to_frame().T
         df_std = df_trials.std().to_frame().T
