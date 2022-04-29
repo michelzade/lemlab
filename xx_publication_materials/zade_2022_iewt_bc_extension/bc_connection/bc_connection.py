@@ -1,4 +1,4 @@
-import xx_publication_materials.zade_2021_energies_bc_lemlab_extension.bc_connection.bc_param as bc_param
+import xx_publication_materials.zade_2022_iewt_bc_extension.bc_connection.bc_param as bc_param
 import time
 import json
 import os

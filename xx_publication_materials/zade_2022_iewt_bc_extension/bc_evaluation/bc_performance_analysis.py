@@ -13,7 +13,7 @@ from telegram_connector_class import SenderTelegram
 from lemlab.lem import clearing_ex_ante
 from bc_test_settlement import test_meter_info, test_user_info, test_meter_readings, test_prices_settlement, \
     test_transaction_logs, test_balancing_energy, test_clearing_results_ex_ante
-from xx_publication_materials.zade_2021_energies_bc_lemlab_extension.bc_connection.bc_node \
+from xx_publication_materials.zade_2022_iewt_bc_extension.bc_connection.bc_node \
     import kill_process_by_name, start_openethereum_node, restart_openethereum_node
 
 

@@ -1,7 +1,7 @@
 import os
 import time
 import subprocess
-from xx_publication_materials.zade_2021_energies_bc_lemlab_extension.bc_evaluation.test_utils import setup_test_general
+from xx_publication_materials.zade_2022_iewt_bc_extension.bc_evaluation.test_utils import setup_test_general
 
 
 def kill_process_by_name(process_name):
@@ -52,7 +52,7 @@ if __name__ == '__main__':
     restart_openethereum_node(path_toml_file=path_toml_file)
     # Create connection objects
     config, db_obj, bc_obj_clearing_ex_ante, bc_obj_settlement = setup_test_general(generate_random_test_data=False,
-                                                                                    test_config_path="xx_publication_materials/zade_2021_energies_bc_lemlab_extension/bc_evaluation/sim_test_config.yaml")
+                                                                                    test_config_path="xx_publication_materials/zade_2022_iewt_bc_extension/bc_evaluation/sim_test_config.yaml")
     # Trigger sample tx
     tx_hash = bc_obj_clearing_ex_ante.web3_eth.send_transaction({"from": bc_obj_clearing_ex_ante.web3_eth.coinbase,
                                                                  "to": bc_obj_clearing_ex_ante.web3_eth.coinbase,

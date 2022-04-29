@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from lemlab.db_connection.db_connection import DatabaseConnection
-from xx_publication_materials.zade_2021_energies_bc_lemlab_extension.bc_connection.bc_connection import \
+from xx_publication_materials.zade_2022_iewt_bc_extension.bc_connection.bc_connection import \
     BlockchainConnection
 from lemlab.lem import clearing_ex_ante, settlement
 from current_scenario_file import scenario_file_path
