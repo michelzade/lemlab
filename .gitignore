@@ -128,24 +128,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-lem_analysis/monte_carlo/simulations/
 
-#lem_analysis/
+lem_analysis/
 
-lem_analysis/time_complexity/simulations/
-
-xx_publication_materials/2021_zade_apen_satisfying_user_pref/truffle/migrations/
-
-xx_publication_materials/2021_zade_apen_satisfying_user_pref/time_complexity/simulations/
-
-xx_publication_materials/2021_zade_energies_bc_lemlab_extension/truffle/migrations/
-
-xx_publication_materials/2021_zade_energies_bc_lemlab_extension/truffle/test/
-
-xx_publication_materials/2021_zade_energies_bc_lemlab_extension/truffle/truffle-config.js
-
-xx_publication_materials/zade_2022_apen_satisfying_user_pref/time_complexity/simulations/
-
-xx_publication_materials/zade_2022_iewt_bc_extension/bc_evaluation/evaluation_results/
-
-xx_publication_materials/zade_2022_iewt_bc_extension/bc_evaluation/telegram_config.yaml
