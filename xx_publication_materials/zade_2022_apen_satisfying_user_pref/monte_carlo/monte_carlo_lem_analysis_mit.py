@@ -847,7 +847,7 @@ def plot_all_clearing_results(config, results_dict, dict_plot=None):
 if __name__ == '__main__':
     # Run simulations ####################################
     # load configuration file
-    with open(f"monte_carlo_config_v02.yaml") as config_file:
+    with open(f"monte_carlo_config.yaml") as config_file:
         config_mc = yaml.load(config_file, Loader=yaml.FullLoader)
     # Create simulation directory
     t_current = pd.Timestamp.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -877,7 +877,7 @@ if __name__ == '__main__':
     pool.close()
 
     # # Load pre-existing results and configurations ##########
-    # path_sim = 'simulations/2021-05-23_16-00-15/'
+    # path_sim = 'simulations/2022-04-29_10-39-30/'
     # # load configuration file
     # with open(f"{path_sim}/mc_config.yaml") as config_file:
     #     config_mc = yaml.load(config_file, Loader=yaml.FullLoader)
