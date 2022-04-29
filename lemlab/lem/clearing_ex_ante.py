@@ -1303,7 +1303,7 @@ def clearing_cc(db_obj,
             # Remove all bids with zero quantity
             bids_remaining = bids_remaining[bids_remaining[db_obj.db_param.QTY_ENERGY] > 0]
 
-            print(f"While loop iteration: {counter}, time: {time.time() - t_while_start}")
+            # print(f"While loop iteration: {counter}, time: {time.time() - t_while_start}")
             counter = counter + 1
         # Append unsatisfied bids with uncleared bids
         bids_uncleared = pd.concat([bids_uncleared, bids_cld_q_all_unsatisfied_total])
