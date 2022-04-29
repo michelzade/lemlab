@@ -87,7 +87,7 @@ def run_clearings(db_obj,
                             bids=bids_uncleared,
                             type_clearing=type_clearing,
                             type_prioritization='h2l')
-            positions_cleared = positions_cleared.append(results_pp).reset_index(drop=True)
+            positions_cleared = pd.concat([positions_cleared, results_pp]).reset_index(drop=True)
 
     # Combinations WITH consideration of quality premium ###
     # Standard da AFTER advanced clearing
@@ -111,7 +111,7 @@ def run_clearings(db_obj,
                             type_clearing=type_clearing,
                             add_premium=True,
                             type_prioritization='h2l')
-            positions_cleared = positions_cleared.append(results_pp).reset_index(drop=True)
+            positions_cleared = pd.concat([positions_cleared, results_pp]).reset_index(drop=True)
 
             positions_cleared_da, offers_uncleared_da, bids_uncleared_da, offers_cleared_da, bids_cleared_da = \
                 clearing_pda(db_obj,
@@ -120,7 +120,7 @@ def run_clearings(db_obj,
                              bids_uncleared_pp,
                              add_premium=False, )
 
-            positions_cleared = positions_cleared.append(positions_cleared_da, ignore_index=True)
+            positions_cleared = pd.concat([positions_cleared, positions_cleared_da], ignore_index=True)
 
     if not positions_cleared.empty and config_lem['share_quality_logging_extended']:
         positions_cleared = calc_market_position_shares(db_obj, config_lem, offers, bids, positions_cleared)

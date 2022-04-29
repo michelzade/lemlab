@@ -160,9 +160,9 @@ retailer:
 
 time_complexity:
   "min_positions": 10
-  "max_positions": 10020
+  "max_positions": 1020
   "step_size": 500
-  "n_samples": 100
+  "n_samples": 4
 
 
 ########################################################################################################################
