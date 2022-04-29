@@ -8,15 +8,15 @@ This readme describes how the time complexity analysis can be reproduced, descri
 and the most important configurations.
 
 ### How to reproduce the results?
-1. Create manually a subfolder called *simulations*.
-2. Run the script *time_complexity_analysis.py*.
+Run the script *time_complexity_analysis.py*.
 
 ### What happens in the background?
 The time complexity analysis is performed with the *time_complexity_analysis.py* file. At the bottom of the file the
 main function contains the most important steps.
-1. Run time complexity analysis 
-2. Plot results 
-3. Optionally: results can be plotted from file (see uncommented part)
+1. Create a simulations folder for the results if it does not exist already. 
+2. Run time complexity analysis 
+3. Plot results 
+4. Optionally: results can be plotted from file (see uncommented part)
 
 ### How to configure the time complexity analysis?
 All important parameters for the time complexity analysis are in the .yaml file. Within

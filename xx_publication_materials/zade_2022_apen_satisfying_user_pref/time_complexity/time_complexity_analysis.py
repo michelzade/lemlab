@@ -2,6 +2,7 @@ import time
 import pandas as pd
 import numpy as np
 from ruamel.yaml import YAML
+from pathlib import Path
 from matplotlib import pyplot as plt
 
 from lem_analysis.random_lem_fcts import create_random_positions, create_user_ids
@@ -219,6 +220,8 @@ def load_timing_results_from_file(file_name):
 
 
 if __name__ == '__main__':
+    # Create folder for results if not already existent
+    Path("simulations").mkdir(parents=True, exist_ok=True)
 
     # Run timing analysis ###
     config_file_name = "time_complexity_config.yaml"
