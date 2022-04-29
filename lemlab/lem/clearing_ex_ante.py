@@ -192,7 +192,7 @@ def market_clearing(db_obj,
                                         type_prioritization='h2l',
                                         plotting=plotting,
                                         plotting_title=f'{plotting_title}; pref. satis.')
-                        positions_cleared = positions_cleared.append(results_pp).reset_index(drop=True)
+                        positions_cleared = pd.concat([positions_cleared, results_pp]).reset_index(drop=True)
 
                 if 'cc_l2h' == type_clearing:
                     positions_cleared, offers_uncleared, bids_uncleared, offers_cleared, bids_cleared = \
@@ -215,7 +215,7 @@ def market_clearing(db_obj,
                                         type_prioritization='l2h',
                                         plotting=plotting,
                                         plotting_title=f'{plotting_title}; pref. satis.')
-                        positions_cleared = positions_cleared.append(results_pp).reset_index(drop=True)
+                        positions_cleared = pd.concat([positions_cleared, results_pp]).reset_index(drop=True)
 
                 if 'cc_sep' == type_clearing:
                     positions_cleared, offers_uncleared, bids_uncleared, offers_cleared, bids_cleared = \
@@ -238,7 +238,7 @@ def market_clearing(db_obj,
                                         type_prioritization='sep',
                                         plotting=plotting,
                                         plotting_title=f'{plotting_title}; pref. satis.')
-                        positions_cleared = positions_cleared.append(results_pp).reset_index(drop=True)
+                        positions_cleared = pd.concat([positions_cleared, results_pp]).reset_index(drop=True)
 
                 if 'sep_cc' == type_clearing:
                     positions_cleared, offers_uncleared, bids_uncleared, offers_cleared, bids_cleared = \
@@ -259,7 +259,7 @@ def market_clearing(db_obj,
                                         plotting=plotting,
                                         plotting_title=plotting_title,
                                         verbose=verbose)
-                        positions_cleared = positions_cleared.append(results_ps).reset_index(drop=True)
+                        positions_cleared = pd.concat([positions_cleared, results_ps]).reset_index(drop=True)
 
                 if 'l2h_cc' == type_clearing:
                     positions_cleared, offers_uncleared, bids_uncleared, offers_cleared, bids_cleared = \
@@ -280,7 +280,7 @@ def market_clearing(db_obj,
                             plotting=plotting,
                             plotting_title=plotting_title,
                             verbose=verbose)
-                        positions_cleared = positions_cleared.append(results_ps).reset_index(drop=True)
+                        positions_cleared = pd.concat([positions_cleared, results_ps]).reset_index(drop=True)
 
                 if 'h2l_cc' == type_clearing:
                     positions_cleared, offers_uncleared, bids_uncleared, offers_cleared, bids_cleared = \
@@ -301,7 +301,7 @@ def market_clearing(db_obj,
                                         plotting=plotting,
                                         plotting_title=plotting_title,
                                         verbose=verbose)
-                        positions_cleared = positions_cleared.append(results_ps).reset_index(drop=True)
+                        positions_cleared = pd.concat([positions_cleared, results_ps]).reset_index(drop=True)
 
                 # Combinations WITH consideration of quality premium ###
                 # Standard da AFTER advanced clearing
@@ -325,7 +325,7 @@ def market_clearing(db_obj,
                                      plotting=plotting,
                                      plotting_title=plotting_title)
 
-                    positions_cleared = positions_cleared.append(positions_cleared_da, ignore_index=True)
+                    positions_cleared = pd.concat([positions_cleared, positions_cleared_da], ignore_index=True)
 
                 if 'l2h_pda' == type_clearing:
                     positions_cleared, offers_uncleared, bids_uncleared, offers_cleared, bids_cleared = \
@@ -347,7 +347,7 @@ def market_clearing(db_obj,
                                      plotting=plotting,
                                      plotting_title=plotting_title)
 
-                    positions_cleared = positions_cleared.append(positions_cleared_da, ignore_index=True)
+                    positions_cleared = pd.concat([positions_cleared, positions_cleared_da], ignore_index=True)
 
                 if 'sep_pda' == type_clearing:
                     positions_cleared, offers_uncleared, bids_uncleared, offers_cleared, bids_cleared = \
@@ -369,7 +369,7 @@ def market_clearing(db_obj,
                                      plotting=plotting,
                                      plotting_title=plotting_title)
 
-                    positions_cleared = positions_cleared.append(positions_cleared_da, ignore_index=True)
+                    positions_cleared = pd.concat([positions_cleared, positions_cleared_da], ignore_index=True)
 
                 if 'cc_pda' == type_clearing:
                     positions_cleared, offers_uncleared, bids_uncleared, offers_cleared, bids_cleared = \
@@ -391,7 +391,7 @@ def market_clearing(db_obj,
                                      plotting=plotting,
                                      plotting_title=plotting_title)
 
-                    positions_cleared = positions_cleared.append(positions_cleared_da, ignore_index=True)
+                    positions_cleared = pd.concat([positions_cleared, positions_cleared_da], ignore_index=True)
 
                 if 'cc_h2l_pda' == type_clearing:
                     positions_cleared, offers_uncleared, bids_uncleared, offers_cleared, bids_cleared = \
@@ -416,7 +416,7 @@ def market_clearing(db_obj,
                                         type_prioritization='h2l',
                                         plotting=plotting,
                                         plotting_title=f'{plotting_title}; pref. satis.')
-                        positions_cleared = positions_cleared.append(results_pp).reset_index(drop=True)
+                        positions_cleared = pd.concat([positions_cleared, results_pp]).reset_index(drop=True)
 
                         positions_cleared_da, offers_uncleared_da, bids_uncleared_da, offers_cleared_da, bids_cleared_da = \
                             clearing_pda(db_obj,
@@ -427,7 +427,7 @@ def market_clearing(db_obj,
                                          plotting=plotting,
                                          plotting_title=plotting_title)
 
-                        positions_cleared = positions_cleared.append(positions_cleared_da, ignore_index=True)
+                        positions_cleared = pd.concat([positions_cleared, positions_cleared_da], ignore_index=True)
 
                 if 'cc_l2h_pda' == type_clearing:
                     positions_cleared, offers_uncleared, bids_uncleared, offers_cleared, bids_cleared = \
@@ -452,7 +452,7 @@ def market_clearing(db_obj,
                                         type_prioritization='l2h',
                                         plotting=plotting,
                                         plotting_title=f'{plotting_title}; pref. satis.')
-                        positions_cleared = positions_cleared.append(results_pp).reset_index(drop=True)
+                        positions_cleared = pd.concat([positions_cleared, results_pp]).reset_index(drop=True)
 
                         positions_cleared_da, offers_uncleared_da, bids_uncleared_da, offers_cleared_da, bids_cleared_da = \
                             clearing_pda(db_obj,
@@ -463,7 +463,7 @@ def market_clearing(db_obj,
                                          plotting=plotting,
                                          plotting_title=plotting_title)
 
-                        positions_cleared = positions_cleared.append(positions_cleared_da, ignore_index=True)
+                        positions_cleared = pd.concat([positions_cleared, positions_cleared_da], ignore_index=True)
 
                 if 'cc_sep_pda' == type_clearing:
                     positions_cleared, offers_uncleared, bids_uncleared, offers_cleared, bids_cleared = \
@@ -488,7 +488,7 @@ def market_clearing(db_obj,
                                         type_prioritization='sep',
                                         plotting=plotting,
                                         plotting_title=f'{plotting_title}; pref. satis.')
-                        positions_cleared = positions_cleared.append(results_pp).reset_index(drop=True)
+                        positions_cleared = pd.concat([positions_cleared, results_pp]).reset_index(drop=True)
 
                         positions_cleared_da, offers_uncleared_da, bids_uncleared_da, offers_cleared_da, bids_cleared_da = \
                             clearing_pda(db_obj,
@@ -499,7 +499,7 @@ def market_clearing(db_obj,
                                          plotting=plotting,
                                          plotting_title=plotting_title)
 
-                        positions_cleared = positions_cleared.append(positions_cleared_da, ignore_index=True)
+                        positions_cleared = pd.concat([positions_cleared, positions_cleared_da], ignore_index=True)
 
                 if 'sep_cc_pda' == type_clearing:
                     positions_cleared, offers_uncleared, bids_uncleared, offers_cleared, bids_cleared = \
@@ -520,7 +520,7 @@ def market_clearing(db_obj,
                                         plotting=plotting,
                                         plotting_title=plotting_title,
                                         verbose=verbose)
-                        positions_cleared = positions_cleared.append(results_ps).reset_index(drop=True)
+                        positions_cleared = pd.concat([positions_cleared, results_ps]).reset_index(drop=True)
 
                         positions_cleared_da, offers_uncleared_da, bids_uncleared_da, offers_cleared_da, bids_cleared_da = \
                             clearing_pda(db_obj,
@@ -531,7 +531,7 @@ def market_clearing(db_obj,
                                          plotting=plotting,
                                          plotting_title=plotting_title)
 
-                        positions_cleared = positions_cleared.append(positions_cleared_da, ignore_index=True)
+                        positions_cleared = pd.concat([positions_cleared, positions_cleared_da], ignore_index=True)
 
                 if 'l2h_cc_pda' == type_clearing:
                     positions_cleared, offers_uncleared, bids_uncleared, offers_cleared, bids_cleared = \
@@ -552,7 +552,7 @@ def market_clearing(db_obj,
                                         plotting=plotting,
                                         plotting_title=plotting_title,
                                         verbose=verbose)
-                        positions_cleared = positions_cleared.append(results_ps).reset_index(drop=True)
+                        positions_cleared = pd.concat([positions_cleared, results_ps]).reset_index(drop=True)
 
                         positions_cleared_da, offers_uncleared_da, bids_uncleared_da, offers_cleared_da, bids_cleared_da = \
                             clearing_pda(db_obj,
@@ -563,7 +563,7 @@ def market_clearing(db_obj,
                                          plotting=plotting,
                                          plotting_title=plotting_title)
 
-                        positions_cleared = positions_cleared.append(positions_cleared_da, ignore_index=True)
+                        positions_cleared = pd.concat([positions_cleared, positions_cleared_da], ignore_index=True)
 
                 if 'h2l_cc_pda' == type_clearing:
                     positions_cleared, offers_uncleared, bids_uncleared, offers_cleared, bids_cleared = \
@@ -584,7 +584,7 @@ def market_clearing(db_obj,
                                         plotting=plotting,
                                         plotting_title=plotting_title,
                                         verbose=verbose)
-                        positions_cleared = positions_cleared.append(results_ps).reset_index(drop=True)
+                        positions_cleared = pd.concat([positions_cleared, results_ps]).reset_index(drop=True)
 
                         positions_cleared_da, offers_uncleared_da, bids_uncleared_da, offers_cleared_da, bids_cleared_da = \
                             clearing_pda(db_obj,
@@ -595,7 +595,7 @@ def market_clearing(db_obj,
                                          plotting=plotting,
                                          plotting_title=plotting_title)
 
-                        positions_cleared = positions_cleared.append(positions_cleared_da, ignore_index=True)
+                        positions_cleared = pd.concat([positions_cleared, positions_cleared_da], ignore_index=True)
 
                 # Standard pda BEFORE advanced clearing
                 if 'pda_h2l' == type_clearing:
@@ -618,7 +618,7 @@ def market_clearing(db_obj,
                                     plotting=plotting,
                                     plotting_title=plotting_title)
 
-                    positions_cleared = positions_cleared.append(positions_cleared_da, ignore_index=True)
+                    positions_cleared = pd.concat([positions_cleared, positions_cleared_da], ignore_index=True)
 
                 if 'pda_l2h' == type_clearing:
                     positions_cleared_da, offers_uncleared_da, bids_uncleared_da, offers_cleared_da, bids_cleared_da = \
@@ -640,7 +640,7 @@ def market_clearing(db_obj,
                                     plotting=plotting,
                                     plotting_title=plotting_title)
 
-                    positions_cleared = positions_cleared.append(positions_cleared_da, ignore_index=True)
+                    positions_cleared = pd.concat([positions_cleared, positions_cleared_da], ignore_index=True)
 
                 if 'pda_sep' == type_clearing:
                     positions_cleared_da, offers_uncleared_da, bids_uncleared_da, offers_cleared_da, bids_cleared_da = \
@@ -662,7 +662,7 @@ def market_clearing(db_obj,
                                     plotting=plotting,
                                     plotting_title=plotting_title)
 
-                    positions_cleared = positions_cleared.append(positions_cleared_da, ignore_index=True)
+                    positions_cleared = pd.concat([positions_cleared, positions_cleared_da], ignore_index=True)
 
                 if 'pda_cc' == type_clearing:
                     positions_cleared_da, offers_uncleared_da, bids_uncleared_da, offers_cleared_da, bids_cleared_da = \
@@ -684,7 +684,7 @@ def market_clearing(db_obj,
                                     plotting_title=plotting_title,
                                     verbose=verbose)
 
-                    positions_cleared = positions_cleared.append(positions_cleared_da, ignore_index=True)
+                    positions_cleared = pd.concat([positions_cleared, positions_cleared_da], ignore_index=True)
 
                 if 'pda_cc_h2l' == type_clearing:
                     positions_cleared_da, offers_uncleared_da, bids_uncleared_da, offers_cleared_da, bids_cleared_da = \
@@ -707,7 +707,7 @@ def market_clearing(db_obj,
                                         plotting_title=plotting_title,
                                         verbose=verbose)
 
-                        positions_cleared = results_ps.append(positions_cleared_da, ignore_index=True)
+                        positions_cleared = pd.concat([results_ps, positions_cleared_da], ignore_index=True)
 
                         results_pp, offers_uncleared_pp, bids_uncleared_pp, offers_cleared_pp, bids_cleared_pp = \
                             clearing_pp(db_obj=db_obj,
@@ -719,7 +719,7 @@ def market_clearing(db_obj,
                                         type_prioritization='h2l',
                                         plotting=plotting,
                                         plotting_title=f'{plotting_title}; pref. satis.')
-                        positions_cleared = positions_cleared.append(results_pp).reset_index(drop=True)
+                        positions_cleared = pd.concat([positions_cleared, results_pp]).reset_index(drop=True)
 
                 if 'pda_cc_l2h' == type_clearing:
                     positions_cleared_da, offers_uncleared_da, bids_uncleared_da, offers_cleared_da, bids_cleared_da = \
@@ -742,7 +742,7 @@ def market_clearing(db_obj,
                                         plotting_title=plotting_title,
                                         verbose=verbose)
 
-                        positions_cleared = results_ps.append(positions_cleared_da, ignore_index=True)
+                        positions_cleared = pd.concat([results_ps, positions_cleared_da], ignore_index=True)
 
                         results_pp, offers_uncleared_pp, bids_uncleared_pp, offers_cleared_pp, bids_cleared_pp = \
                             clearing_pp(db_obj=db_obj,
@@ -754,7 +754,7 @@ def market_clearing(db_obj,
                                         type_prioritization='l2h',
                                         plotting=plotting,
                                         plotting_title=f'{plotting_title}; pref. satis.')
-                        positions_cleared = positions_cleared.append(results_pp).reset_index(drop=True)
+                        positions_cleared = pd.concat([positions_cleared, results_pp]).reset_index(drop=True)
 
                 if 'pda_cc_sep' == type_clearing:
                     positions_cleared_da, offers_uncleared_da, bids_uncleared_da, offers_cleared_da, bids_cleared_da = \
@@ -777,7 +777,7 @@ def market_clearing(db_obj,
                                         plotting_title=plotting_title,
                                         verbose=verbose)
 
-                        positions_cleared = results_ps.append(positions_cleared_da, ignore_index=True)
+                        positions_cleared = pd.concat([results_ps, positions_cleared_da], ignore_index=True)
 
                         results_pp, offers_uncleared_pp, bids_uncleared_pp, offers_cleared_pp, bids_cleared_pp = \
                             clearing_pp(db_obj=db_obj,
@@ -789,7 +789,7 @@ def market_clearing(db_obj,
                                         type_prioritization='sep',
                                         plotting=plotting,
                                         plotting_title=f'{plotting_title}; pref. satis.')
-                        positions_cleared = positions_cleared.append(results_pp).reset_index(drop=True)
+                        positions_cleared = pd.concat([positions_cleared, results_pp]).reset_index(drop=True)
 
                 if 'pda_h2l_cc' == type_clearing:
                     positions_cleared_da, offers_uncleared_da, bids_uncleared_da, offers_cleared_da, bids_cleared_da = \
@@ -812,7 +812,7 @@ def market_clearing(db_obj,
                                         type_prioritization='h2l',
                                         plotting=plotting,
                                         plotting_title=f'{plotting_title}; pref. satis.')
-                        positions_cleared = positions_cleared_da.append(results_pp).reset_index(drop=True)
+                        positions_cleared = pd.concat([positions_cleared_da, results_pp]).reset_index(drop=True)
 
                         results_ps, offers_uncleared_ps, bids_uncleared_ps, offers_cleared_ps, bids_cleared_ps = \
                             clearing_cc(db_obj,
@@ -824,7 +824,7 @@ def market_clearing(db_obj,
                                         plotting_title=plotting_title,
                                         verbose=verbose)
 
-                        positions_cleared = positions_cleared.append(results_ps, ignore_index=True)
+                        positions_cleared = pd.concat([positions_cleared, results_ps], ignore_index=True)
 
                 if 'pda_l2h_cc' == type_clearing:
                     positions_cleared_da, offers_uncleared_da, bids_uncleared_da, offers_cleared_da, bids_cleared_da = \
@@ -847,7 +847,7 @@ def market_clearing(db_obj,
                                         type_prioritization='l2h',
                                         plotting=plotting,
                                         plotting_title=f'{plotting_title}; pref. satis.')
-                        positions_cleared = positions_cleared_da.append(results_pp).reset_index(drop=True)
+                        positions_cleared = pd.concat([positions_cleared_da, results_pp]).reset_index(drop=True)
 
                         results_ps, offers_uncleared_ps, bids_uncleared_ps, offers_cleared_ps, bids_cleared_ps = \
                             clearing_cc(db_obj,
@@ -859,7 +859,7 @@ def market_clearing(db_obj,
                                         plotting_title=plotting_title,
                                         verbose=verbose)
 
-                        positions_cleared = positions_cleared.append(results_ps, ignore_index=True)
+                        positions_cleared = pd.concat([positions_cleared, results_ps], ignore_index=True)
 
                 if 'pda_sep_cc' == type_clearing:
                     positions_cleared_da, offers_uncleared_da, bids_uncleared_da, offers_cleared_da, bids_cleared_da = \
@@ -882,7 +882,7 @@ def market_clearing(db_obj,
                                         type_prioritization='sep',
                                         plotting=plotting,
                                         plotting_title=f'{plotting_title}; pref. satis.')
-                        positions_cleared = positions_cleared_da.append(results_pp).reset_index(drop=True)
+                        positions_cleared = pd.concat([positions_cleared_da, results_pp]).reset_index(drop=True)
 
                         results_ps, offers_uncleared_ps, bids_uncleared_ps, offers_cleared_ps, bids_cleared_ps = \
                             clearing_cc(db_obj,
@@ -894,14 +894,14 @@ def market_clearing(db_obj,
                                         plotting_title=plotting_title,
                                         verbose=verbose)
 
-                        positions_cleared = positions_cleared.append(results_ps, ignore_index=True)
+                        positions_cleared = pd.concat([positions_cleared, results_ps], ignore_index=True)
 
                 # Check whether market has cleared a volume
                 if not positions_cleared.empty:
                     if config_lem['share_quality_logging_extended']:
                         positions_cleared = calc_market_position_shares(db_obj, config_lem,
                                                                         offers_ts_d, bids_ts_d, positions_cleared)
-                    results_clearing = results_clearing.append(positions_cleared, ignore_index=True)
+                    results_clearing = pd.concat([results_clearing, positions_cleared], ignore_index=True)
 
         t_clearing_end = round(time.time())
         if verbose:
@@ -1126,8 +1126,8 @@ def clearing_pda(db_obj,
         bids_offers_uncleared = positions_merged[
             positions_merged[db_obj.db_param.PRICE_ENERGY + db_obj.db_param.EXTENSION_OFFER] >
             positions_merged[db_obj.db_param.PRICE_ENERGY + db_obj.db_param.EXTENSION_BID]]
-        bids_offers_uncleared = bids_offers_uncleared.append(
-            positions_merged[positions_merged.isna().any(axis=1)])
+        bids_offers_uncleared = pd.concat([bids_offers_uncleared,
+            positions_merged[positions_merged.isna().any(axis=1)]])
         if not bids_offers_uncleared.empty:
             # Assign merged quantities to positions
             qty_merged = [bids_offers_uncleared.index[0] - qty_energy_cleared] + \
@@ -1252,10 +1252,10 @@ def clearing_cc(db_obj,
                 qty_offers_max = offers_cleared_q[db_obj.db_param.QTY_ENERGY].sum() - qty_offers_quality_assigned
                 bids_cleared_q_satisfied = bids_cleared_q[bids_cleared_q['CumEnQ'] <= qty_offers_max]
                 qty_offers_quality_assigned += bids_cleared_q_satisfied[db_obj.db_param.QTY_ENERGY].sum()
-                bids_cleared_q_satisfied_all = bids_cleared_q_satisfied_all.append(bids_cleared_q_satisfied)
+                bids_cleared_q_satisfied_all = pd.concat([bids_cleared_q_satisfied_all, bids_cleared_q_satisfied])
                 if not bids_cleared_q[db_obj.db_param.QTY_ENERGY].sum() <= qty_offers_max:
-                    bids_cld_q_all_unsatisfied = bids_cld_q_all_unsatisfied.append(
-                        bids_cleared_q[bids_cleared_q['CumEnQ'] > qty_offers_max])
+                    bids_cld_q_all_unsatisfied = pd.concat([bids_cld_q_all_unsatisfied,
+                        bids_cleared_q[bids_cleared_q['CumEnQ'] > qty_offers_max]])
 
             # Check whether
             if bids_cld_q_all_unsatisfied.empty:
@@ -1271,7 +1271,7 @@ def clearing_cc(db_obj,
                                                                                 db_obj.db_param.ID_USER,
                                                                                 db_obj.db_param.PRICE_ENERGY,
                                                                                 db_obj.db_param.QUALITY_ENERGY])
-            bids_cld_q_all_unsatisfied_total = bids_cld_q_all_unsatisfied_total.append(bids_cld_q_all_unsatisfied)
+            bids_cld_q_all_unsatisfied_total = pd.concat([bids_cld_q_all_unsatisfied_total, bids_cld_q_all_unsatisfied])
             bids_remaining = _aggregate_identical_positions(db_obj=db_obj,
                                                             positions=bids_remaining,
                                                             subset=[db_obj.db_param.TS_DELIVERY,
@@ -1298,7 +1298,7 @@ def clearing_cc(db_obj,
                         ]
                 new_qty = _df_bid_removal[db_obj.db_param.QTY_ENERGY] - row[db_obj.db_param.QTY_ENERGY]
                 _df_bid_removal = _df_bid_removal.assign(**{db_obj.db_param.QTY_ENERGY: new_qty})
-                bids_remaining = bids_remaining.drop(index=_df_bid_removal.index).append(_df_bid_removal)
+                bids_remaining = pd.concat([bids_remaining.drop(index=_df_bid_removal.index), _df_bid_removal])
 
             # Remove all bids with zero quantity
             bids_remaining = bids_remaining[bids_remaining[db_obj.db_param.QTY_ENERGY] > 0]
@@ -1306,7 +1306,7 @@ def clearing_cc(db_obj,
             print(f"While loop iteration: {counter}, time: {time.time() - t_while_start}")
             counter = counter + 1
         # Append unsatisfied bids with uncleared bids
-        bids_uncleared = bids_uncleared.append(bids_cld_q_all_unsatisfied_total)
+        bids_uncleared = pd.concat([bids_uncleared, bids_cld_q_all_unsatisfied_total])
     except Exception as e:
         print(e)
         traceback.print_exc()
@@ -1374,7 +1374,7 @@ def clearing_pp(db_obj,
             if preference == preferences_sorted[0]:
                 offers_temp = offers[offers[db_obj.db_param.QUALITY_ENERGY] == preference]
             else:
-                offers_temp = offers[offers[db_obj.db_param.QUALITY_ENERGY] == preference].append(offers_uncleared)
+                offers_temp = pd.concat([offers[offers[db_obj.db_param.QUALITY_ENERGY] == preference], offers_uncleared])
         if type_prioritization == 'l2h':
             if preference == preferences_sorted[0]:
                 offers_temp = offers[offers[db_obj.db_param.QUALITY_ENERGY] >= preference]
@@ -1392,7 +1392,7 @@ def clearing_pp(db_obj,
             clearing_pda(db_obj=db_obj, config_lem=config_lem, offers=offers_temp, bids=bids_temp,
                          type_clearing=type_clearing, add_premium=add_premium,
                          plotting=plotting, plotting_title=f'{plotting_title} #{preference}')
-        positions_cleared_all = positions_cleared_all.append(positions_cleared).reset_index(drop=True)
+        positions_cleared_all = pd.concat([positions_cleared_all, positions_cleared]).reset_index(drop=True)
 
     return positions_cleared_all, offers_uncleared, bids_uncleared, offers_cleared, bids_cleared
 
@@ -1451,13 +1451,13 @@ def _add_retailer_bids(db_obj,
     temp_df.at[0, db_obj.db_param.STATUS_POSITION] = 0
     temp_df.at[0, db_obj.db_param.PREMIUM_PREFERENCE_QUALITY] = 0
     temp_df.at[0, db_obj.db_param.TS_DELIVERY] = t_clearing_current
-    sorted_offers_t_d = sorted_offers_t_d.append(temp_df, ignore_index=True)
+    sorted_offers_t_d = pd.concat([sorted_offers_t_d, temp_df], ignore_index=True)
 
     temp_df.at[0, db_obj.db_param.TYPE_POSITION] = 1
     temp_df.at[0, db_obj.db_param.PRICE_ENERGY] = int(
         config_retailer['price_buy'] * db_obj.db_param.EURO_TO_SIGMA / 1000)
     temp_df.at[0, db_obj.db_param.QTY_ENERGY] = config_retailer['qty_energy_bid']
-    sorted_bids_t_d = sorted_bids_t_d.append(temp_df, ignore_index=True)
+    sorted_bids_t_d = pd.concat([sorted_bids_t_d, temp_df], ignore_index=True)
 
     return sorted_bids_t_d, sorted_offers_t_d
 
@@ -1583,7 +1583,7 @@ def _log_transactions_market(db_obj, config_lem, results_market, name_column_pri
 
     # Log all credit transactions
     db_obj.log_transactions(df_transactions)
-    df_transactions_all = df_transactions_all.append(df_transactions, ignore_index=True)
+    df_transactions_all = pd.concat([df_transactions_all, df_transactions], ignore_index=True)
 
     # Create transaction df for consumer debit
     df_transactions = df_transactions.assign(
@@ -1597,7 +1597,7 @@ def _log_transactions_market(db_obj, config_lem, results_market, name_column_pri
 
     # Log all debit transactions
     db_obj.log_transactions(df_transactions)
-    df_transactions_all = df_transactions_all.append(df_transactions, ignore_index=True)
+    df_transactions_all = pd.concat([df_transactions_all, df_transactions], ignore_index=True)
 
     return df_transactions_all
 
