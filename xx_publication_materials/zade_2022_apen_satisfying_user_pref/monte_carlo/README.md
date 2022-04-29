@@ -17,8 +17,8 @@ main function contains the most important steps.
 2. Create a simulation folder (careful: simulations folder must exist beforehand). 
 3. Save configuration to simulation folder
 4. Perform Monte Carlo simulations in multiprocessing mode
-5. Optional (comment in and comment  out): load pre-existing results and configurations
-6. Evaluate and save in pickle format placed and cleared market positions
+5. Optional (uncommented): load pre-existing results and configurations
+6. Evaluate and save placed and cleared market positions
 7. Plot results
 
 
@@ -38,3 +38,7 @@ with the same number of inserted market positions.
 
 *prosumer/general_number_of*:   number of prosumers registered on the market (should be larger than 
 *n_positions_per_iteration*).
+
+### You have questions that you cannot find answers to?
+
+Write me a mail to michel.zade@tum.de and I will get back to you. 
